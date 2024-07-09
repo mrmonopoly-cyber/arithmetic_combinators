@@ -1,32 +1,13 @@
-mod combinator{
-    #[derive(Debug,PartialEq)]
-    pub struct Combinator{
-        prim_port: Box<Option<Combinator>>,
-        aux_port: Option<Vec<Option<Box<Combinator>>>>,
-    }
+mod combinator;
 
-    impl Combinator {
-        pub fn new(num_aux_port: u8) ->Combinator {
-            
-            let mut aux_port_maybe = None;
-            if num_aux_port > 0{
-                let mut aux_port : Vec<Option<Box<Combinator>>> = Vec::new();
-                for _ in 0..num_aux_port{
-                    aux_port.push(None);
-                }
-                aux_port_maybe = Some(aux_port);
-            }
+use combinator::generic_combinator::{self, GenericCombinator};
 
-            Combinator{
-                prim_port: Box::new(None),
-                aux_port: aux_port_maybe,
-            }
-        }
-        
-    }
-}
-
+use crate::combinator::Combinator;
 
 fn main() {
-    let comb = combinator::Combinator::new(0);
+    let aux_port: &[Option<&GenericCombinator>] = &[None,None];
+
+    let _comb_no_aux = generic_combinator::GenericCombinator::new_no_auxiliary();
+    let _comb_aux = generic_combinator::GenericCombinator::new_with_auxiliary(aux_port);
+    _comb_no_aux.test();
 }
