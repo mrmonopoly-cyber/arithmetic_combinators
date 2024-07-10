@@ -1,24 +1,7 @@
 pub mod inc_combinator{
-    use crate::{combinator::generic_combinator::generic_combinator::BasicCombinator, GenericCombinator};
+    use crate::combinator::generic_combinator::basic_combinator::BasicCombinator;
 
-    
-    #[derive(Debug)]
-    pub struct IncComb<'a> {
-        basic_comb: BasicCombinator<'a>,
-    }
-
-    pub fn new<'a>() -> IncComb<'a> {
-        IncComb { 
-            basic_comb: BasicCombinator::new_no_auxiliary(1,"INC")
-        }
-    }
-
-    impl <'a> GenericCombinator for IncComb<'a>{
-        fn get_lable_id(&self) -> u8 {
-            self.basic_comb.get_lable_id()
-        }
-        fn get_lable_name(&self) -> &str {
-            self.basic_comb.get_lable_name()
-        }
+    pub fn new_inc<'a>() -> BasicCombinator<'a> {
+        BasicCombinator::new_basic_combinator(1,"INC",None,None)
     }
 }
