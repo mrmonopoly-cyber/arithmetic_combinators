@@ -1,9 +1,13 @@
-use graph::zero::zero_combinator;
+mod node;
 
-mod graph;
+use node::node::Node;
 
 fn main() {
-    let new_zer0 = zero_combinator::new_zero_com();
 
+    let graph = Node::inc();
+    let graph = graph.attach(Node::inc());
+    let graph = graph.attach(Node::zero());
+    let graph = graph.attach(Node::sum());
 
+    graph.print_tree();
 }
