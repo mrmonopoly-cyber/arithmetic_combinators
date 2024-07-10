@@ -1,13 +1,14 @@
-mod combinator;
+pub mod combinator;
 
-use combinator::generic_combinator::{self, GenericCombinator};
-
-use crate::combinator::Combinator;
+use combinator::*;
 
 fn main() {
-    let aux_port: &[Option<&GenericCombinator>] = &[None,None];
+    let zero_c = zero::zero_combinator::new();
+    let inc_c = inc::inc_combinator::new();
+    let dec_c = dec::dec_combinator::new();
 
-    let _comb_no_aux = generic_combinator::GenericCombinator::new_no_auxiliary();
-    let _comb_aux = generic_combinator::GenericCombinator::new_with_auxiliary(aux_port);
-    _comb_no_aux.test();
+    println!("{},{}",zero_c.get_lable_id(),zero_c.get_lable_name());
+    println!("{},{}",inc_c.get_lable_id(),inc_c.get_lable_name());
+    println!("{},{}",dec_c.get_lable_id(),dec_c.get_lable_name());
+
 }
