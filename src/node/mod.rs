@@ -10,7 +10,7 @@ pub mod graph{
         result: Option<usize>,
     }
 
-    #[derive(Debug,Clone)]
+    #[derive(Debug)]
     pub struct Link {
         dst: usize,
         dst_port: usize,
@@ -27,12 +27,12 @@ pub mod graph{
     impl Node {
         fn free_port(&self) -> Option<usize> {
             let mut res = None;
-            println!("se, {}",self.ports.len());
-            for i in (self.ports.len()-1)..=0{
-                println!("se in , {}",i);
-                if let None = self.ports[i]{
-                    res = Some(i);
+            let mut index =0;
+            for i in self.ports.iter(){
+                if let None = i{
+                    res = Some(index);
                 }
+                index+=1;
             };
             res
         }
@@ -58,38 +58,32 @@ pub mod graph{
         }
 
         pub fn print(&self) {
-            fn print_node(s :&Graph, n_index: usize){
-                let res = &s.nodes[n_index];
-                let op = &s.operations[res.op_index];
-
-                for p_index in (res.ports.len()-1)..0{
-                    if let Some(link) = &res.ports[p_index]  {
-                        print_node(&s, link.dst_port);
-                    }
-                }
+            for node in self.nodes.iter(){
+                let op = &self.operations[node.op_index];
                 println!("name: {}", op.label);
-                for port in (op.arity-1)..=0{
-                    if let Some(link) = &res.ports[port]{
-                        let dst_op = &s.operations[link.dst].label;
-                        println!("start port: {}, ",port);
+                let mut index = 0;
+                for port in node.ports.iter(){
+                    if let Some(link) = port{
+                        let dst_op = &self.operations[link.dst].label;
+                        print!("port: {}, ",index);
+                        print!("dst: {}, ",dst_op);
                         println!("dst port: {}, ",link.dst_port);
-                        println!("dst : {}, ",dst_op);
+                        println!("============================");
                     }
+                    index+=1;
                 }
-            }
-
-            if let Some(res) = self.result{
-                print_node(self, res);
             }
         }
 
         pub fn attach(&mut self, op: Operation<'a>) {
             let op_index :Option<usize>= {
                 let mut res = None;
-                for s_op_i in 0..self.operations.len(){
-                    if self.operations[s_op_i] == op{
-                        res = Some(s_op_i)
+                let mut index = 0;
+                for s_op in self.operations.iter(){
+                    if *s_op == op{
+                        res = Some(index)
                     }
+                    index+=1;
                 };
                 res
             };
@@ -98,6 +92,7 @@ pub mod graph{
                 ports : op.generate_ports(),
                 op_index: op_index.unwrap(),
             };
+
             let new_node_free_port = new_node.free_port().unwrap();
             let new_node_index = self.nodes.len();
             self.nodes.push(new_node);

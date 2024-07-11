@@ -13,6 +13,7 @@ pub mod operations{
             let op_vec = Vec::from([
                 Operation::zero(),
                 Operation::inc(),
+                Operation::sum(),
             ]);
             op_vec.into_boxed_slice()
         }
@@ -23,6 +24,10 @@ pub mod operations{
 
         pub fn inc() -> Self{
             Operation::new(2,"INC")
+        }
+
+        pub fn sum() -> Self{
+            Operation::new(3,"SUM")
         }
 
         pub fn generate_ports(&self) -> Box<[Option<Link>]>{
