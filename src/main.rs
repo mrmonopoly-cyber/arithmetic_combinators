@@ -1,13 +1,13 @@
 mod node;
+mod operation;
 
-use node::node::Node;
+use node::graph::Graph;
+use operation::operations::Operation;
 
 fn main() {
 
-    let graph = Node::inc();
-    let graph = graph.attach(Node::inc());
-    let graph = graph.attach(Node::zero());
-    let graph = graph.attach(Node::sum());
+    let mut graph = Graph::new();
+    graph.attach(&Operation::zero());
 
-    graph.print_tree();
+    graph.print();
 }

@@ -1,69 +1,94 @@
-pub mod node{
-    #[derive(Debug,Clone)]
-    pub struct Node<'a> {
-        //0 : main port
-        //1..arity-2: aux_port
-        //arity-1: Result port
-        ports: Vec<Option<Node<'a>>>,
-        arity: usize,
-        next_free: usize,
-        label: &'a str,
+pub mod graph{
+    use std::usize;
+
+    use crate::operation::operations::Operation;
+
+    pub struct Graph<'a>{
+        operations: Vec<Operation<'a>>,
+        nodes: Vec<Node<'a>>,
+        result: Option<usize>,
     }
-    
-    impl<'a> Node<'a> {
-        pub fn zero() -> Node<'a> {
-            Node::new("ZERO", 1)
-        }
 
-        pub fn inc() -> Node<'a> {
-            Node::new("INC", 2)
-        }
+    struct Node<'a> {
+        pub index_op: usize,
+        pub main_port: Option<usize>,
+        pub aux_port: Option<&'a [Option<usize>]>
+    }
 
-        pub fn dec() -> Node<'a> {
-            Node::new("DEC", 2)
-        }
+    impl<'a> Graph<'a> {
+        pub fn attach(& mut self, new_node: &Operation<'a>){
+            let mut op : Option<usize> = None;
+            for i in 0..self.operations.len(){
+                if self.operations[i].same(new_node) {
+                    op = Some(i);
+                }
+            }
+            let new_node : Option<Node> = match op {
+                None => None,
+                Some(op) => {
+                    let ope = &self.operations[op];
+                    let aux_ports = (ope.generate_aux_ports)();
+                    Some(Node{
+                        main_port : None,
+                        index_op : op,
+                        aux_port : aux_ports,
+                    })
+                },
+            };
 
-        pub fn sum() -> Node<'a> {
-            Node::new("SUM", 3)
-        }
-
-        pub fn print_tree(&self){
-            println!("node {}",self.label);
-            for i in  0..self.arity {
-                if let Some(n) = &self.ports[i]{
-                    println!("{} port {} : {}",self.label,i,n.label);
-                    n.print_tree();
+            if let Some(node) = new_node{
+                match &self.result {
+                    None => {
+                        self.nodes.push(node);
+                        self.result = Some(0);
+                    }
+                    Some(_r) => {
+                    },
                 }
             }
         }
 
-        pub fn attach(mut self, mut new_node: Node<'a>) -> Node<'a>{
-            match self.next_free {
-                0 =>{
-                    new_node.ports[new_node.arity-1] = Some(self);
-                    new_node
-                },
-                _ =>{
-                    self.ports[self.next_free] = Some(new_node);
-                    self.next_free-=1;
-                    self
+        pub fn print(& self){
+            match &self.result {
+                None => {},
+                Some(n) => {
+                    let res_node = &self.nodes[n.clone()];
+                    let node_name = &self.operations[res_node.index_op].label;
+                    let main_port_node_name = {
+                        match res_node.main_port{
+                            None => "NONE",
+                            Some(i) =>{
+                                &self.operations[i].label
+                            }
+                        }
+                    };
+                    println!("node label: {}", node_name);
+                    println!("main port: {}", main_port_node_name);
+                    if let Some(aux) = res_node.aux_port{
+                        for i in 0..aux.len(){
+                            let aux_port_name = {
+                                match aux[i]{
+                                    None => "NONE",
+                                    Some(i) =>{
+                                        &self.operations[i].label
+                                    }
+                                }
+                            };
+                            println!("port {}: {} ",i,aux_port_name);
+                        }
+                    }
                 },
             }
         }
 
-        fn new(name: &str, arity: usize) -> Node{
-            Node{
-                arity: arity,
-                next_free: {
-                    match arity {
-                        1 => 0,
-                        _ => arity -2,
-                    }
-                },
-                label: name,
-                ports:  vec![None;arity],
+        pub fn new() -> Self {
+            Graph { 
+                operations: vec![Operation::zero()],
+                nodes: Vec::new(),
+                result: None,
             }
         }
     }
 
-}
+
+    }
