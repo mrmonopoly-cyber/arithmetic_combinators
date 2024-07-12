@@ -47,16 +47,16 @@ pub mod arith_combinator_graph{
 
         let sum_cond = Box::new(
             [
-                op_pool.generate_conf_port([Some("INC"),Some("INC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("INC"),Some("INC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("INC"),Some("DEC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("INC"),Some("ZERO"),None].as_slice()),
-                op_pool.generate_conf_port([Some("DEC"),Some("INC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("DEC"),Some("DEC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("DEC"),Some("ZERO"),None].as_slice()),
-                op_pool.generate_conf_port([Some("ZERO"),Some("INC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("ZERO"),Some("DEC"),None].as_slice()),
-                op_pool.generate_conf_port([Some("ZERO"),Some("ZERO"),None].as_slice()),
+                [Some("INC"),Some("INC"),None].as_slice(),
+                [Some("INC"),Some("INC"),None].as_slice(),
+                [Some("INC"),Some("DEC"),None].as_slice(),
+                [Some("INC"),Some("ZERO"),None].as_slice(),
+                [Some("DEC"),Some("INC"),None].as_slice(),
+                [Some("DEC"),Some("DEC"),None].as_slice(),
+                [Some("DEC"),Some("ZERO"),None].as_slice(),
+                [Some("ZERO"),Some("INC"),None].as_slice(),
+                [Some("ZERO"),Some("DEC"),None].as_slice(),
+                [Some("ZERO"),Some("ZERO"),None].as_slice(),
             ]);
 
         op_pool.add_rule("SUM", "INC", Some(sum_cond));

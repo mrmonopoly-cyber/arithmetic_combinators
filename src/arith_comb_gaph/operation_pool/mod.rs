@@ -85,8 +85,20 @@ pub mod operation_pool{
         pub fn add_rule(&mut self,
                         main_comb: &'a str, 
                         aux_comb: &'a str,
-                        new_rules:Option<Box<[RuleInfo<'a>]>>){
+                        new_rules:Option<Box<[&'a[Option<&'a str>]]>>){
 
+            let new_rules = {
+                match new_rules{
+                    None => None,
+                    Some(conf) =>{
+                        let mut vec_rule = Vec::new();
+                        for conf in conf.iter(){
+                            vec_rule.push(self.generate_conf_port(conf));
+                        }
+                        Some(vec_rule.into_boxed_slice())
+                    },
+                }
+            };
             let main_comb = self.find_index(main_comb);
             let aux_comb = self.find_index(aux_comb);
             match (main_comb,aux_comb){
