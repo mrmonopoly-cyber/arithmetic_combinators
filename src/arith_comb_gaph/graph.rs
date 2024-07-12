@@ -1,5 +1,5 @@
 pub mod graph{
-    use std::usize;
+    use std::{usize, vec};
 
     use crate::arith_comb_gaph::operation::operations::Operation;
 
@@ -22,6 +22,7 @@ pub mod graph{
     struct Node<'a>{
         op_label : &'a str,
         pub ports: Box<[Option<Link>]>,
+        main_port: usize,
         //0 is return port
         //1 is main port if possible, else 0 is main port
     }
@@ -34,6 +35,10 @@ pub mod graph{
                     let none_ports: Option<Link> = None;
                     let vec_ports = vec![none_ports;op.arity];
                     vec_ports.into_boxed_slice()
+                },
+                main_port: match op.arity {
+                    1 => 0,
+                    _ => 1,
                 },
             }
         }
@@ -122,10 +127,44 @@ pub mod graph{
             }
         }
 
+        fn extract_label_port(&self, node: &Node) -> Box<[Option<&'a str>]>{
+            let mut vec_label = Vec::new();
+            for port in node.ports.iter(){
+                match port {
+                    None => vec_label.push(None),
+                    Some(link) => vec_label.push(Some(self.nodes[link.dst].op_label)),
+                }
+            }
+            vec_label.into_boxed_slice()
+        }
 
         pub fn copute(&mut self){
-            if let Some(res) = self.result{
-                let _cursor = res;
+            for node in &self.nodes{
+                match &node.ports[node.main_port] {
+                    None =>(),
+                    Some(link) =>{
+                        let aux_node = &self.nodes[link.dst];
+                        if link.dst_port == node.main_port && 
+                            link.dst_port == aux_node.main_port{
+                                println!("found potential computational step:
+                                    main node: {}, 
+                                    in port: {},
+                                    aux node: {}, 
+                                    in port: {}", 
+                                    node.op_label,
+                                    node.main_port,
+                                    self.nodes[link.dst].op_label,
+                                    link.dst_port
+                                );
+                            let main_port_label = self.extract_label_port(node);
+                            let aux_port_label = self.extract_label_port(aux_node);
+                            let rule_main_node = self.operations
+                                .find_applicable_rule(node.op_label, aux_node.op_label,
+                                    &main_port_label,&aux_port_label);
+
+                        }
+                    },
+                };
             }
         }
         

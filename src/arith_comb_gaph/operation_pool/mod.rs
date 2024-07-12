@@ -38,7 +38,6 @@ pub mod operation_pool{
                 int_link: Box::new([]),
             }
         }
-        
     }
 
 
@@ -48,6 +47,30 @@ pub mod operation_pool{
                 ops: ops,
                 rules: Vec::new(),
             }
+        }
+
+        fn extract_label_port(&self, rule: &RuleInfo) -> Box<[Option<&'a str>]>{
+            let mut vec_label = Vec::new();
+            for rule_data in rule.conf.iter(){
+                match rule_data{
+                    None => vec_label.push(None),
+                    Some(data) => vec_label.push(Some(self.ops[*data].label)),
+                }
+            }
+            vec_label.into_boxed_slice()
+        }
+
+        pub fn find_applicable_rule(&self, 
+            main_node_label: &str,
+            aux_node_label: &str,
+            main_port_label : &Box<[Option<& str>]>,
+            aux_port_label: &Box<[Option<& str>]>) -> Option<&Rule>  {
+
+            let res = None;
+            for rule in self.rules.iter(){
+
+            };
+            res
         }
 
         pub fn find(&self, name:&'a str) ->Option<&Operation<'a>>{
