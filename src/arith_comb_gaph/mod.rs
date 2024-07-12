@@ -3,7 +3,12 @@ mod operation;
 mod operation_pool;
 
 pub mod arith_combinator_graph{
-    use super::{graph::graph::Graph, operation::operations::Operation, operation_pool::operation_pool::OpPool};
+    use super::
+    {
+        graph::graph::Graph, 
+        operation::operations::Operation, 
+        operation_pool::operation_pool::OpPool
+    };
     use strum::IntoEnumIterator;
     use variant_count::VariantCount;
     use strum_macros::EnumIter;
@@ -36,7 +41,9 @@ pub mod arith_combinator_graph{
     }
 
     pub fn new_graph<'a>() -> Graph<'a> {
-        let op_pool = OpPool::new(get_arith_ops(), None);
+        let mut op_pool = OpPool::new(get_arith_ops());
+        op_pool.add_rule("INC", "ZERO", None);
+        op_pool.add_rule("SUM", "INC", None);
         Graph::new(op_pool)
     }
 }

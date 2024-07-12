@@ -1,5 +1,5 @@
 pub mod operations{
-    #[derive(Debug,PartialEq)]
+    #[derive(Debug,PartialEq,Clone)]
     pub struct Operation<'a> {
         pub label: &'a str,
         pub arity: usize,
