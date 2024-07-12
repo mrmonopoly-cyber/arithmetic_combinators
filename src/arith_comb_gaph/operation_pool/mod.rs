@@ -30,6 +30,17 @@ pub mod operation_pool{
         int_link: Box<[(usize,usize,usize,usize)]>, 
     }
 
+    impl<'a> SubPattern<'a> {
+        pub fn new() -> Self {
+            Self{
+                ext_link: Box::new([]),
+                new_op: Box::new([]),
+                int_link: Box::new([]),
+            }
+        }
+        
+    }
+
 
     impl<'a> OpPool<'a> {
         pub fn new(ops: Box<[Operation<'a>]>) -> Self {
@@ -85,14 +96,14 @@ pub mod operation_pool{
         pub fn add_rule(&mut self,
                         main_comb: &'a str, 
                         aux_comb: &'a str,
-                        new_rules:Option<Box<[&'a[Option<&'a str>]]>>){
+                        new_rules:Option<Box<[(&'a[Option<&'a str>],SubPattern<'a>)]>>){
 
             let new_rules = {
                 match new_rules{
                     None => None,
                     Some(conf) =>{
                         let mut vec_rule = Vec::new();
-                        for conf in conf.iter(){
+                        for (conf,_subs) in conf.iter(){
                             vec_rule.push(self.generate_conf_port(conf));
                         }
                         Some(vec_rule.into_boxed_slice())
