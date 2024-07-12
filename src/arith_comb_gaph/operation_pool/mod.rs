@@ -15,9 +15,9 @@ pub mod operation_pool{
     }
 
     #[derive(Debug,PartialEq,Clone)]
-    struct RuleInfo {
-        conf: Box<[Option<usize>]>,
-        subs: usize,
+    pub struct RuleInfo {
+        pub conf: Box<[Option<usize>]>,
+        pub subs: usize,
     }
 
 
@@ -52,7 +52,7 @@ pub mod operation_pool{
             res
         }
 
-        fn generate_conf_port(&self, port_conf: &'a[Option<&'a str>] ) -> RuleInfo{
+        pub fn generate_conf_port(&self, port_conf: &'a[Option<&'a str>] ) -> RuleInfo{
             let mut vec_conf = Vec::new();
             for port in port_conf{
                 match *port {
@@ -71,26 +71,16 @@ pub mod operation_pool{
         pub fn add_rule(&mut self,
                         main_comb: &'a str, 
                         aux_comb: &'a str,
-                        new_rules: Option<Box<[&'a [Option<&'a str>]]>>){
+                        new_rules:Option<Box<[RuleInfo]>>){
+
             let main_comb = self.find_index(main_comb);
             let aux_comb = self.find_index(aux_comb);
-
             match (main_comb,aux_comb){
                 (Some(main_comb),Some(aux_comb)) =>{
-                    let mut pool_rule = Rule { 
+                    let pool_rule = Rule { 
                         main_active_op_label: main_comb, 
                         other_active_op_label: aux_comb, 
-                        possibilities: None };
-                    match new_rules {
-                        None => (),
-                        Some(new_rules) =>{
-                            let mut vec_rule_info = Vec::new();
-                            for new_rule in new_rules.iter() {
-                                vec_rule_info.push(self.generate_conf_port(*new_rule));
-                            }
-                            pool_rule.possibilities = Some(vec_rule_info.into_boxed_slice());
-                        },
-                    };
+                        possibilities: new_rules};
                     self.rules.push(pool_rule)
                 },
                 _ => (),
