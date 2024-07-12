@@ -1,15 +1,16 @@
-mod node;
-mod operation;
+use arith_comb_gaph::arith_combinator_graph::{self, ArithOp};
 
-use node::graph::Graph;
-use operation::operations::Operation;
+mod arith_comb_gaph;
 
 fn main() {
+    let mut graph = arith_combinator_graph::new_graph();
+    let zero = arith_combinator_graph::create_op(ArithOp::ZERO);
+    let inc = arith_combinator_graph::create_op(ArithOp::INC);
 
-    let mut graph = Graph::new();
-    graph.attach(Operation::zero());
-    graph.attach(Operation::inc());
-    graph.attach(Operation::sum());
+    graph.attach(zero.label);
+    graph.attach(inc.label);
 
-    graph.print();
+    graph.print_graph();
+
+    graph.copute();
 }
