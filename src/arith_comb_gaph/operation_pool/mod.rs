@@ -4,20 +4,30 @@ pub mod operation_pool{
     #[derive(Debug)]
     pub struct OpPool<'a> {
         ops: Box<[Operation<'a>]>,
-        rules: Vec<Rule>,
+        rules: Vec<Rule<'a>>,
     }
 
     #[derive(Debug,PartialEq,Clone)]
-    pub struct Rule {
+    pub struct Rule<'a> {
         main_active_op_label: usize,
         other_active_op_label: usize,
-        possibilities: Option<Box<[RuleInfo]>>,
+        possibilities: Option<Box<[RuleInfo<'a>]>>,
     }
 
     #[derive(Debug,PartialEq,Clone)]
-    pub struct RuleInfo {
+    pub struct RuleInfo<'a> {
         pub conf: Box<[Option<usize>]>,
-        pub subs: usize,
+        pub subs: SubPattern<'a>,
+    }
+
+    #[derive(Debug,PartialEq,Clone)]
+    pub struct SubPattern<'a> {
+        new_op: Box<[&'a str]>,
+        // index op dst, dst port
+        ext_link: Box<[(usize,usize)]>, 
+        //index start op, port start port
+        //index end op, index end port
+        int_link: Box<[(usize,usize,usize,usize)]>, 
     }
 
 
@@ -52,7 +62,7 @@ pub mod operation_pool{
             res
         }
 
-        pub fn generate_conf_port(&self, port_conf: &'a[Option<&'a str>] ) -> RuleInfo{
+        pub fn generate_conf_port(&self, port_conf: &'a[Option<&'a str>] ) -> RuleInfo<'a>{
             let mut vec_conf = Vec::new();
             for port in port_conf{
                 match *port {
@@ -64,20 +74,24 @@ pub mod operation_pool{
             }
             RuleInfo{
                 conf: vec_conf.into_boxed_slice(),
-                subs: 0,
+                subs: SubPattern{
+                    new_op: Box::new([]),
+                    ext_link: Box::new([]),
+                    int_link: Box::new([]),
+                },
             }
         }
 
         pub fn add_rule(&mut self,
                         main_comb: &'a str, 
                         aux_comb: &'a str,
-                        new_rules:Option<Box<[RuleInfo]>>){
+                        new_rules:Option<Box<[RuleInfo<'a>]>>){
 
             let main_comb = self.find_index(main_comb);
             let aux_comb = self.find_index(aux_comb);
             match (main_comb,aux_comb){
                 (Some(main_comb),Some(aux_comb)) =>{
-                    let pool_rule = Rule { 
+                    let pool_rule = Rule{ 
                         main_active_op_label: main_comb, 
                         other_active_op_label: aux_comb, 
                         possibilities: new_rules};
