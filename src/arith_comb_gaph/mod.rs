@@ -43,7 +43,20 @@ pub mod arith_combinator_graph{
     pub fn new_graph<'a>() -> Graph<'a> {
         let mut op_pool = OpPool::new(get_arith_ops());
         op_pool.add_rule("INC", "ZERO", None);
-        op_pool.add_rule("SUM", "INC", None);
+        op_pool.add_rule("INC", "INC", None);
+        let sum_cond = Box::new(
+            [
+            [Some("INC"),Some("INC"),None].as_slice(),
+            [Some("INC"),Some("DEC"),None].as_slice(),
+            [Some("INC"),Some("ZERO"),None].as_slice(),
+            [Some("DEC"),Some("INC"),None].as_slice(),
+            [Some("DEC"),Some("DEC"),None].as_slice(),
+            [Some("DEC"),Some("ZERO"),None].as_slice(),
+            [Some("ZERO"),Some("INC"),None].as_slice(),
+            [Some("ZERO"),Some("DEC"),None].as_slice(),
+            [Some("ZERO"),Some("ZERO"),None].as_slice(),
+            ]);
+        op_pool.add_rule("SUM", "INC", Some(sum_cond));
         Graph::new(op_pool)
     }
 }

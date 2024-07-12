@@ -86,6 +86,8 @@ pub mod graph{
                     index+=1;
                 }
             }
+
+            self.operations.print_rules();
         }
 
         pub fn attach(&mut self, op_name: &'a str) {
