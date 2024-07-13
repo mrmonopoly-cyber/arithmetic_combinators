@@ -41,6 +41,7 @@ pub mod operation_pool{
     }
 
 
+
     impl<'a> OpPool<'a> {
         pub fn new(ops: Box<[Operation<'a>]>) -> Self {
             Self{
@@ -49,27 +50,29 @@ pub mod operation_pool{
             }
         }
 
-        fn extract_label_port(&self, rule: &RuleInfo) -> Box<[Option<&'a str>]>{
-            let mut vec_label = Vec::new();
-            for rule_data in rule.conf.iter(){
-                match rule_data{
-                    None => vec_label.push(None),
-                    Some(data) => vec_label.push(Some(self.ops[*data].label)),
-                }
-            }
-            vec_label.into_boxed_slice()
-        }
-
         pub fn find_applicable_rule(&self, 
             main_node_label: &str,
             aux_node_label: &str,
             main_port_label : &Box<[Option<& str>]>,
             aux_port_label: &Box<[Option<& str>]>) -> Option<&Rule>  {
 
-            let res = None;
+            let mut rule_container = None;
             for rule in self.rules.iter(){
-
+                let main_rule_node = &self.ops[rule.main_active_op_label];
+                let auxi_rule_node = &self.ops[rule.other_active_op_label];
+                if  main_rule_node.label == main_node_label &&
+                    auxi_rule_node.label == aux_node_label {
+                        rule_container = Some(rule);
+                }
             };
+
+            let mut res = None;
+            if let Some(rule) = rule_container{
+                if let Some(poss) = &rule.possibilities{
+                    for sub in poss.iter(){
+                    }
+                }
+            }
             res
         }
 
@@ -133,9 +136,9 @@ pub mod operation_pool{
                     },
                 }
             };
-            let main_comb = self.find_index(main_comb);
-            let aux_comb = self.find_index(aux_comb);
-            match (main_comb,aux_comb){
+            let main_comb_i = self.find_index(main_comb);
+            let aux_comb_i = self.find_index(aux_comb);
+            match (main_comb_i,aux_comb_i){
                 (Some(main_comb),Some(aux_comb)) =>{
                     let pool_rule = Rule{ 
                         main_active_op_label: main_comb, 
@@ -143,7 +146,9 @@ pub mod operation_pool{
                         possibilities: new_rules};
                     self.rules.push(pool_rule)
                 },
-                _ => (),
+                _ => {
+                    println!("not found op: main {}, aux: {}", main_comb,aux_comb);
+                },
             }
         }
 
@@ -173,6 +178,12 @@ pub mod operation_pool{
                     }
                 },
             }
+        }
+
+        pub fn print_rule(&self, rule :&Rule){
+            println!("Rule of main: {}, to aux: {}",
+                self.ops[rule.main_active_op_label].label,
+                self.ops[rule.other_active_op_label].label);
         }
 
         pub fn print_rules(&self){

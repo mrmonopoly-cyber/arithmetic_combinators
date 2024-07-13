@@ -146,27 +146,32 @@ pub mod graph{
                         let aux_node = &self.nodes[link.dst];
                         if link.dst_port == node.main_port && 
                             link.dst_port == aux_node.main_port{
-                                println!("found potential computational step:
-                                    main node: {}, 
-                                    in port: {},
-                                    aux node: {}, 
-                                    in port: {}", 
-                                    node.op_label,
-                                    node.main_port,
-                                    self.nodes[link.dst].op_label,
-                                    link.dst_port
-                                );
                             let main_port_label = self.extract_label_port(node);
                             let aux_port_label = self.extract_label_port(aux_node);
-                            let rule_main_node = self.operations
-                                .find_applicable_rule(node.op_label, aux_node.op_label,
+                            let rule_main_node = self.operations.find_applicable_rule(
+                                    node.op_label, aux_node.op_label,
                                     &main_port_label,&aux_port_label);
 
+                            match rule_main_node{
+                                None =>(),
+                                Some(rule) =>{
+                                    println!("found computational step:
+                                        main node: {}, 
+                                        in port: {},
+                                        aux node: {}, 
+                                        in port: {}",
+                                        node.op_label,
+                                        node.main_port,
+                                        self.nodes[link.dst].op_label,
+                                        link.dst_port,
+                                    );
+                                    self.operations.print_rule(&rule);
+                                },
+                            }
                         }
                     },
                 };
             }
         }
-        
     }
 }

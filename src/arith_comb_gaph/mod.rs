@@ -42,6 +42,7 @@ pub mod arith_combinator_graph{
 
     pub fn new_graph<'a>() -> Graph<'a> {
         let mut op_pool = OpPool::new(get_arith_ops());
+        op_pool.add_rule("ZERO", "ZERO", None);
         op_pool.add_rule("INC", "ZERO", None);
         op_pool.add_rule("INC", "INC", None);
 
