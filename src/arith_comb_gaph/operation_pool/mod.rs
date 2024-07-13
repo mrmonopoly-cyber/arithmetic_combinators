@@ -51,29 +51,70 @@ pub mod operation_pool{
         }
 
         pub fn find_applicable_rule(&self, 
-            main_node_label: &str,
-            aux_node_label: &str,
-            main_port_label : &Box<[Option<& str>]>,
-            aux_port_label: &Box<[Option<& str>]>) -> Option<&Rule>  {
+            main_node_label: &str, main_port_label : &Box<[Option<&str>]>,) -> Option<&RuleInfo>  {
+
+            fn extract_ext_conf_in_vec<'a>(ports: &Box<[Option<&'a str>]>) 
+                -> Box<[Option<&'a str>]>{
+                let mut res = Vec::new();
+                for port in ports.iter(){
+                    match *port{
+                        None => res.push(None),
+                        Some(port) =>{
+                            res.push(Some(port));
+                        },
+                    };
+                };
+                res.into_boxed_slice()
+            }
 
             let mut rule_container = None;
             for rule in self.rules.iter(){
                 let main_rule_node = &self.ops[rule.main_active_op_label];
-                let auxi_rule_node = &self.ops[rule.other_active_op_label];
-                if  main_rule_node.label == main_node_label &&
-                    auxi_rule_node.label == aux_node_label {
+                if  main_rule_node.label == main_node_label{
                         rule_container = Some(rule);
                 }
             };
 
-            let mut res = None;
-            if let Some(rule) = rule_container{
-                if let Some(poss) = &rule.possibilities{
-                    for sub in poss.iter(){
-                    }
+            let main_ext_port = extract_ext_conf_in_vec(main_port_label);
+
+            println!("ext port");
+            for p in main_ext_port.iter(){
+                match p {
+                    None => print!("None,"),
+                    Some(p) =>{
+                        print!("{},",p)
+                    },
                 }
             }
-            res
+            println!("");
+
+            match rule_container{
+                None => {
+                    return None;
+                },
+                Some(rule_container) => {
+                    if let Some(rules) = &rule_container.possibilities{
+                        for rule in rules.iter(){
+                            for i in 0..rule.conf.len(){
+                                match (main_ext_port[i], rule.conf[i]){
+                                    (Some(op),Some(op_i)) =>{
+                                        let main_op_port = self.ops[op_i].label;
+                                        if op != main_op_port{
+                                            return None;
+                                        }else{
+                                            continue;
+                                        }
+                                    },
+                                    _ => continue,
+                                }
+                            }
+                            return Some(rule);
+                        }
+                    }
+                },
+            }
+            
+            None
         }
 
         pub fn find(&self, name:&'a str) ->Option<&Operation<'a>>{
@@ -122,19 +163,14 @@ pub mod operation_pool{
         pub fn add_rule(&mut self,
                         main_comb: &'a str, 
                         aux_comb: &'a str,
-                        new_rules:Option<Box<[(&'a[Option<&'a str>],SubPattern<'a>)]>>){
+                        new_rules:&Box<[(&'a[Option<&'a str>],SubPattern<'a>)]>){
 
-            let new_rules = {
-                match new_rules{
-                    None => None,
-                    Some(conf) =>{
-                        let mut vec_rule = Vec::new();
-                        for (conf,_subs) in conf.iter(){
-                            vec_rule.push(self.generate_conf_port(conf));
-                        }
-                        Some(vec_rule.into_boxed_slice())
-                    },
+            let new_rules ={
+                let mut vec_rule = Vec::new();
+                for (conf,_subs) in new_rules.iter(){
+                    vec_rule.push(self.generate_conf_port(conf));
                 }
+                Some(vec_rule.into_boxed_slice())
             };
             let main_comb_i = self.find_index(main_comb);
             let aux_comb_i = self.find_index(aux_comb);
@@ -180,11 +216,6 @@ pub mod operation_pool{
             }
         }
 
-        pub fn print_rule(&self, rule :&Rule){
-            println!("Rule of main: {}, to aux: {}",
-                self.ops[rule.main_active_op_label].label,
-                self.ops[rule.other_active_op_label].label);
-        }
 
         pub fn print_rules(&self){
             println!("RULES===============================");

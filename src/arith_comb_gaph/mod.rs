@@ -42,11 +42,17 @@ pub mod arith_combinator_graph{
 
     pub fn new_graph<'a>() -> Graph<'a> {
         let mut op_pool = OpPool::new(get_arith_ops());
-        op_pool.add_rule("ZERO", "ZERO", None);
-        op_pool.add_rule("INC", "ZERO", None);
-        op_pool.add_rule("INC", "INC", None);
+        let null_rule : Box<[(&[Option<&str>], SubPattern)]> = Box::new(
+            [
+                ([None].as_slice(),SubPattern::new()),
+            ],
+        );
 
-        let sum_cond = Box::new(
+        op_pool.add_rule("ZERO", "ZERO", &null_rule);
+        op_pool.add_rule("INC", "ZERO", &null_rule);
+        op_pool.add_rule("INC", "INC", &null_rule);
+
+        let sum_cond : Box<[(&[Option<&str>], SubPattern)]> = Box::new(
             [
             ([Some("INC"),Some("INC"),None].as_slice(),SubPattern::new()),
             ([Some("INC"),Some("INC"),None].as_slice(),SubPattern::new()),
@@ -58,9 +64,10 @@ pub mod arith_combinator_graph{
             ([Some("ZERO"),Some("INC"),None].as_slice(),SubPattern::new()),
             ([Some("ZERO"),Some("DEC"),None].as_slice(),SubPattern::new()),
             ([Some("ZERO"),Some("ZERO"),None].as_slice(),SubPattern::new()),
-            ]);
+            ],
+        );
 
-        op_pool.add_rule("SUM", "INC", Some(sum_cond));
+        op_pool.add_rule("SUM", "INC", &sum_cond);
         Graph::new(op_pool)
     }
 }

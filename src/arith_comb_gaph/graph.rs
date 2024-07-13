@@ -140,17 +140,26 @@ pub mod graph{
 
         pub fn copute(&mut self){
             for node in &self.nodes{
-                match &node.ports[node.main_port] {
+                match &node.ports[node.main_port]{
                     None =>(),
                     Some(link) =>{
                         let aux_node = &self.nodes[link.dst];
                         if link.dst_port == node.main_port && 
                             link.dst_port == aux_node.main_port{
                             let main_port_label = self.extract_label_port(node);
-                            let aux_port_label = self.extract_label_port(aux_node);
+                            println!("main port");
+                            for p in main_port_label.iter(){
+                                match p {
+                                    None => print!("None,"),
+                                    Some(p) =>{
+                                        print!("{},",p)
+                                    },
+                                }
+                            }
+                            println!("");
+
                             let rule_main_node = self.operations.find_applicable_rule(
-                                    node.op_label, aux_node.op_label,
-                                    &main_port_label,&aux_port_label);
+                                    node.op_label,&main_port_label);
 
                             match rule_main_node{
                                 None =>(),
@@ -165,7 +174,6 @@ pub mod graph{
                                         self.nodes[link.dst].op_label,
                                         link.dst_port,
                                     );
-                                    self.operations.print_rule(&rule);
                                 },
                             }
                         }
