@@ -14,22 +14,32 @@ pub mod operation_pool{
         pub subs: SubPattern<'a>,
     }
 
+    #[derive(Debug,PartialEq)]
+    struct SubIntLink{
+        start: usize,
+        dst: usize,
+        start_port: usize,
+        end_port: usize,
+    }
+
+    #[derive(Debug,PartialEq)]
+    struct SubFreePort{
+        node: usize,
+        port: usize,
+    }
+
     #[derive(Debug,PartialEq,Clone)]
     pub struct SubPattern<'a> {
-        new_op: Box<[&'a str]>,
-        // index op dst, dst port
-        ext_link: Box<[(usize,usize)]>, 
-        //index start op, port start port
-        //index end op, index end port
-        int_link: Box<[(usize,usize,usize,usize)]>, 
+        new_nodes_labels: &'a[&'a str],
+        links: &'a[&'a SubIntLink],
+        int_links: &'a [&'a SubIntLink],
+        ext_links: &'a [(usize,usize)],
+        free_ports: &'a[&'a SubFreePort],
     }
 
     impl<'a> SubPattern<'a> {
         pub fn new() -> Self {
             Self{
-                ext_link: Box::new([]),
-                new_op: Box::new([]),
-                int_link: Box::new([]),
             }
         }
     }
