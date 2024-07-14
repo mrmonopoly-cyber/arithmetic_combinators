@@ -46,6 +46,9 @@ pub mod arith_combinator_graph{
         op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),SubPattern::new()));
         op_pool.add_rule( "ZERO", ([Some("ZERO")].as_slice(),SubPattern::new()));
         op_pool.add_rule( "SUM", ([None,Some("INC"),Some("ZERO")].as_slice(),SubPattern::new()));
+        op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("INC")].as_slice(),SubPattern::new()));
+        op_pool.add_rule( "SUM", ([None,Some("INC"),Some("INC")].as_slice(),SubPattern::new()));
+        op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("ZERO")].as_slice(),SubPattern::new()));
         Graph::new(op_pool)
     }
 }
