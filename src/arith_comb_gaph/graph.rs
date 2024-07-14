@@ -45,12 +45,15 @@ pub mod graph{
 
         fn free_port(&self) -> Option<usize> {
             let mut res = None;
-            let mut index =0;
-            for i in self.ports.iter(){
+            let mut index = self.ports.len()-1;
+            for i in self.ports.iter().rev(){
                 if let None = i{
                     res = Some(index);
+                    break;
                 }
-                index+=1;
+                if index > 0{
+                    index-=1;
+                }
             };
             res
         }
@@ -96,12 +99,12 @@ pub mod graph{
         }
 
         pub fn attach(&mut self, op_name: &'a str) {
-            // let op_index :Option<usize>= self.find_op_index(&op);
             let op = self.operations.find(op_name);
             match op{
                 None => (),
                 Some(op) =>{
                     let new_node = Node::new(op);
+                    let new_node_label = new_node.op_label;
                     let new_node_free_port = new_node.free_port().unwrap();
                     let new_node_index = self.nodes.len();
                     self.nodes.push(new_node);
@@ -111,14 +114,22 @@ pub mod graph{
                             return self.result = Some(0);
                         },
                         Some(rn) =>{
-                            let res_node : &mut Node = &mut self.nodes[rn];
+                            let res_node = &mut self.nodes[rn];
                             let res_free_port = res_node.free_port().unwrap();
+
+                            println!(
+                                "linking node {}, to node {}, port {} to port {}",
+                                res_node.op_label, new_node_label,
+                                res_free_port, new_node_free_port
+                                );
 
                             res_node.link_to(new_node_index, res_free_port, 
                                 new_node_free_port);
                             self.nodes[new_node_index]
                                 .link_to(rn, new_node_free_port,res_free_port);
                             if res_free_port == 0{
+                                println!("relinking result to : {}", 
+                                    self.nodes.get(new_node_index).unwrap().op_label);
                                 self.result = Some(new_node_index);
                             }
                         },
@@ -127,58 +138,42 @@ pub mod graph{
             }
         }
 
-        fn extract_label_port(&self, node: &Node) -> Box<[Option<&'a str>]>{
-            let mut vec_label = Vec::new();
-            for port in node.ports.iter(){
-                match port {
-                    None => vec_label.push(None),
-                    Some(link) => vec_label.push(Some(self.nodes[link.dst].op_label)),
-                }
-            }
-            vec_label.into_boxed_slice()
-        }
-
         pub fn copute(&mut self){
+            let mut index =0;
             for node in &self.nodes{
                 match &node.ports[node.main_port]{
-                    None =>(),
+                    None =>continue,
                     Some(link) =>{
-                        let aux_node = &self.nodes[link.dst];
-                        if link.dst_port == node.main_port && 
-                            link.dst_port == aux_node.main_port{
-                            let main_port_label = self.extract_label_port(node);
-                            println!("main port");
-                            for p in main_port_label.iter(){
-                                match p {
-                                    None => print!("None,"),
-                                    Some(p) =>{
-                                        print!("{},",p)
-                                    },
-                                }
-                            }
-                            println!("");
-
-                            let rule_main_node = self.operations.find_applicable_rule(
-                                    node.op_label,&main_port_label);
-
-                            match rule_main_node{
-                                None =>(),
-                                Some(rule) =>{
-                                    println!("found computational step:
-                                        main node: {}, 
-                                        in port: {},
-                                        aux node: {}, 
-                                        in port: {}",
+                        let dst_node = &self.nodes[link.dst];
+                        println!("found link un main port of node : {} ,on port: {}, to: {}",
+                            node.op_label, index, dst_node.op_label);
+                        if let Some(back_link) = &dst_node.ports[dst_node.main_port] {
+                            if back_link.dst == index{
+                                let port_op_conf ={
+                                    let mut res = Vec::new();
+                                    for port in node.ports.iter(){
+                                        match port{
+                                            None => res.push(None),
+                                            Some(link) => {
+                                                let dst_node = &self.nodes[link.dst];
+                                                res.push(Some(dst_node.op_label));
+                                            },
+                                        }
+                                    };
+                                    res.into_boxed_slice()
+                                };
+                                if let Some(rule) = 
+                                    self.operations.find_applicable_rule(
                                         node.op_label,
-                                        node.main_port,
-                                        self.nodes[link.dst].op_label,
-                                        link.dst_port,
-                                    );
-                                },
+                                        &port_op_conf){
+                                    println!("found computational step with rule: ");
+                                    //TODO: apply substitution
+                                }
                             }
                         }
                     },
                 };
+                index+=1;
             }
         }
     }

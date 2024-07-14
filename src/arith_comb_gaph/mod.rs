@@ -42,32 +42,10 @@ pub mod arith_combinator_graph{
 
     pub fn new_graph<'a>() -> Graph<'a> {
         let mut op_pool = OpPool::new(get_arith_ops());
-        let null_rule : Box<[(&[Option<&str>], SubPattern)]> = Box::new(
-            [
-                ([None].as_slice(),SubPattern::new()),
-            ],
-        );
-
-        op_pool.add_rule("ZERO", "ZERO", &null_rule);
-        op_pool.add_rule("INC", "ZERO", &null_rule);
-        op_pool.add_rule("INC", "INC", &null_rule);
-
-        let sum_cond : Box<[(&[Option<&str>], SubPattern)]> = Box::new(
-            [
-            ([Some("INC"),Some("INC"),None].as_slice(),SubPattern::new()),
-            ([Some("INC"),Some("INC"),None].as_slice(),SubPattern::new()),
-            ([Some("INC"),Some("DEC"),None].as_slice(),SubPattern::new()),
-            ([Some("INC"),Some("ZERO"),None].as_slice(),SubPattern::new()),
-            ([Some("DEC"),Some("INC"),None].as_slice(),SubPattern::new()),
-            ([Some("DEC"),Some("DEC"),None].as_slice(),SubPattern::new()),
-            ([Some("DEC"),Some("ZERO"),None].as_slice(),SubPattern::new()),
-            ([Some("ZERO"),Some("INC"),None].as_slice(),SubPattern::new()),
-            ([Some("ZERO"),Some("DEC"),None].as_slice(),SubPattern::new()),
-            ([Some("ZERO"),Some("ZERO"),None].as_slice(),SubPattern::new()),
-            ],
-        );
-
-        op_pool.add_rule("SUM", "INC", &sum_cond);
+        op_pool.add_rule( "INC", ([None,Some("INC")].as_slice(),SubPattern::new()));
+        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),SubPattern::new()));
+        op_pool.add_rule( "ZERO", ([Some("ZERO")].as_slice(),SubPattern::new()));
+        op_pool.add_rule( "SUM", ([None,Some("INC"),Some("ZERO")].as_slice(),SubPattern::new()));
         Graph::new(op_pool)
     }
 }

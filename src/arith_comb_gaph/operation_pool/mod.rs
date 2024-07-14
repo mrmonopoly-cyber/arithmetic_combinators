@@ -4,18 +4,12 @@ pub mod operation_pool{
     #[derive(Debug)]
     pub struct OpPool<'a> {
         ops: Box<[Operation<'a>]>,
-        rules: Vec<Rule<'a>>,
-    }
-
-    #[derive(Debug,PartialEq,Clone)]
-    pub struct Rule<'a> {
-        main_active_op_label: usize,
-        other_active_op_label: usize,
-        possibilities: Option<Box<[RuleInfo<'a>]>>,
+        rules: Vec<RuleInfo<'a>>,
     }
 
     #[derive(Debug,PartialEq,Clone)]
     pub struct RuleInfo<'a> {
+        pub main_node_label: &'a str,
         pub conf: Box<[Option<usize>]>,
         pub subs: SubPattern<'a>,
     }
@@ -50,72 +44,32 @@ pub mod operation_pool{
             }
         }
 
-        pub fn find_applicable_rule(&self, 
-            main_node_label: &str, main_port_label : &Box<[Option<&str>]>,) -> Option<&RuleInfo>  {
-
-            fn extract_ext_conf_in_vec<'a>(ports: &Box<[Option<&'a str>]>) 
-                -> Box<[Option<&'a str>]>{
-                let mut res = Vec::new();
-                for port in ports.iter(){
-                    match *port{
-                        None => res.push(None),
-                        Some(port) =>{
-                            res.push(Some(port));
-                        },
-                    };
-                };
-                res.into_boxed_slice()
-            }
-
-            let mut rule_container = None;
-            for rule in self.rules.iter(){
-                let main_rule_node = &self.ops[rule.main_active_op_label];
-                if  main_rule_node.label == main_node_label{
-                        rule_container = Some(rule);
-                }
-            };
-
-            let main_ext_port = extract_ext_conf_in_vec(main_port_label);
-
-            println!("ext port");
-            for p in main_ext_port.iter(){
-                match p {
-                    None => print!("None,"),
-                    Some(p) =>{
-                        print!("{},",p)
-                    },
-                }
-            }
-            println!("");
-
-            match rule_container{
-                None => {
-                    return None;
-                },
-                Some(rule_container) => {
-                    if let Some(rules) = &rule_container.possibilities{
-                        for rule in rules.iter(){
-                            for i in 0..rule.conf.len(){
-                                match (main_ext_port[i], rule.conf[i]){
-                                    (Some(op),Some(op_i)) =>{
-                                        let main_op_port = self.ops[op_i].label;
-                                        if op != main_op_port{
-                                            return None;
-                                        }else{
-                                            continue;
-                                        }
+        pub fn find_applicable_rule
+            (&self, 
+             main_node_label : &'a str,
+             main_port_label : &Box<[Option<&str>]>,) -> Option<&RuleInfo>  {
+                for rule in self.rules.iter(){
+                    if rule.main_node_label == main_node_label{
+                        let rule_conf_port = {
+                            let mut res = Vec::new();
+                            for port in rule.conf.iter(){
+                                match port{
+                                    None => res.push(None),
+                                    Some(port) =>{
+                                        let port_label = self.ops[*port].label;
+                                        res.push(Some(port_label));
                                     },
-                                    _ => continue,
-                                }
-                            }
-                            return Some(rule);
+                                };
+                            };
+                            res.into_boxed_slice()
+                        };
+                        if rule_conf_port.eq(main_port_label) {
+                            return Some(rule)
                         }
                     }
-                },
+                }
+                None
             }
-            
-            None
-        }
 
         pub fn find(&self, name:&'a str) ->Option<&Operation<'a>>{
             let mut res =None;
@@ -127,104 +81,65 @@ pub mod operation_pool{
             res
         }
 
-        pub fn find_index(&self, name:&'a str) ->Option<usize>{
-            let mut res =None;
-            let mut index = 0;
-            for op in self.ops.iter(){
-                if op.label == name{
-                    res = Some(index);
-                    break
-                }
-                index+=1;
-            }
-            res
-        }
+        pub fn add_rule(&mut self, 
+            main_node_label : &'a str,
+            new_rules:(&[Option<&'a str>],SubPattern<'a>)){
+            let (confs,sub) = new_rules;
 
-        pub fn generate_conf_port(&self, port_conf: &'a[Option<&'a str>] ) -> RuleInfo<'a>{
-            let mut vec_conf = Vec::new();
-            for port in port_conf{
-                match *port {
-                    None => vec_conf.push(None),
-                    Some(label) =>{
-                        vec_conf.push(self.find_index(label))
-                    }
-                }
-            }
-            RuleInfo{
-                conf: vec_conf.into_boxed_slice(),
-                subs: SubPattern{
-                    new_op: Box::new([]),
-                    ext_link: Box::new([]),
-                    int_link: Box::new([]),
-                },
-            }
-        }
+            let conf_rule = {
+                let mut res = Vec::new();
 
-        pub fn add_rule(&mut self,
-                        main_comb: &'a str, 
-                        aux_comb: &'a str,
-                        new_rules:&Box<[(&'a[Option<&'a str>],SubPattern<'a>)]>){
-
-            let new_rules ={
-                let mut vec_rule = Vec::new();
-                for (conf,_subs) in new_rules.iter(){
-                    vec_rule.push(self.generate_conf_port(conf));
-                }
-                Some(vec_rule.into_boxed_slice())
-            };
-            let main_comb_i = self.find_index(main_comb);
-            let aux_comb_i = self.find_index(aux_comb);
-            match (main_comb_i,aux_comb_i){
-                (Some(main_comb),Some(aux_comb)) =>{
-                    let pool_rule = Rule{ 
-                        main_active_op_label: main_comb, 
-                        other_active_op_label: aux_comb, 
-                        possibilities: new_rules};
-                    self.rules.push(pool_rule)
-                },
-                _ => {
-                    println!("not found op: main {}, aux: {}", main_comb,aux_comb);
-                },
-            }
-        }
-
-        fn print_single_port_conf(&self, conf: &Option<Box<[RuleInfo]>>) {
-            println!("rule info:");
-            match conf {
-                None => println!("no rule for this operation"),
-                Some(rules) =>{
-                    let mut rule_index = 0;
-                    for rule in rules.iter() {
-                        let mut port_index =0;
-                        let port_last = rule.conf.len()-1;
-                        println!("rule: {}, ",rule_index);
-                        for port in rule.conf.iter(){
-                            print!("port: {}, ",port_last - port_index);
-                            print!("value: ");
-                            match port {
-                                None => println!("None"),
-                                Some(op_index) =>{
-                                    println!("{}",self.ops[*op_index].label);
-                                },
+                for conf in confs{
+                    match *conf {
+                        None => res.push(None),
+                        Some(op_r) => {
+                            let mut index = 0;
+                            for op in self.ops.iter(){
+                                if op.label == op_r{
+                                    res.push(Some(index));
+                                    break;
+                                }
+                                index+=1;
                             }
-                            port_index+=1;
-                        }
-                        rule_index+=1;
-                        println!("+++++++++++++++++++++++++++++");
+                            // panic!("op not found for label : {}", op_r)
+                        },
                     }
-                },
-            }
+                }
+
+                res.into_boxed_slice()
+            };
+
+            self.rules.push(
+                RuleInfo { 
+                    main_node_label: main_node_label,
+                    conf: conf_rule, 
+                    subs: sub 
+                }
+            );
+
         }
 
 
         pub fn print_rules(&self){
             println!("RULES===============================");
-            let op_labels = &self.ops;
-            for rule in &self.rules{
-                println!("main comb: {},", op_labels[rule.main_active_op_label].label);
-                println!("aux comb: {},", op_labels[rule.other_active_op_label].label);
-                self.print_single_port_conf(&rule.possibilities);
-                println!("-------------------------------");
+            let mut rule_index = 0;
+            for rule in self.rules.iter() {
+                let mut port_index =0;
+                println!("rule: {}, ",rule_index);
+                println!("main op: {}, ",rule.main_node_label);
+                for port in rule.conf.iter(){
+                    print!("port: {}, ",port_index);
+                    print!("value: ");
+                    match port {
+                        None => println!("None"),
+                        Some(op_index) =>{
+                            println!("{}",self.ops[*op_index].label);
+                        },
+                    }
+                    port_index+=1;
+                }
+                rule_index+=1;
+                println!("+++++++++++++++++++++++++++++");
             }
         }
     }
