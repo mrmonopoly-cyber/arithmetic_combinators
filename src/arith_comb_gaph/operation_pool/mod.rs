@@ -15,35 +15,26 @@ pub mod operation_pool{
     }
 
     #[derive(Debug,PartialEq)]
-    struct SubIntLink{
-        start: usize,
-        dst: usize,
-        start_port: usize,
-        end_port: usize,
+    pub struct SubIntLink{
+        pub start: usize,
+        pub dst: usize,
+        pub start_port: usize,
+        pub end_port: usize,
     }
 
     #[derive(Debug,PartialEq)]
-    struct SubFreePort{
-        node: usize,
-        port: usize,
-    }
+    pub struct SubFreePort{
+        pub node: usize,
+        pub port: usize,
+    }   
 
     #[derive(Debug,PartialEq,Clone)]
     pub struct SubPattern<'a> {
-        new_nodes_labels: &'a[&'a str],
-        links: &'a[&'a SubIntLink],
-        int_links: &'a [&'a SubIntLink],
-        ext_links: &'a [(usize,usize)],
-        free_ports: &'a[&'a SubFreePort],
+        pub new_nodes_labels: &'a[&'a str],
+        pub int_links: &'a [&'a SubIntLink],
+        pub ext_links: &'a [(usize,usize)],
+        pub free_ports: &'a[&'a SubFreePort],
     }
-
-    impl<'a> SubPattern<'a> {
-        pub fn new() -> Self {
-            Self{
-            }
-        }
-    }
-
 
 
     impl<'a> OpPool<'a> {

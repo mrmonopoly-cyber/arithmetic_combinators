@@ -7,7 +7,7 @@ pub mod arith_combinator_graph{
     {
         graph::graph::Graph, 
         operation::operations::Operation, 
-        operation_pool::operation_pool::{OpPool, SubPattern},
+        operation_pool::operation_pool::{OpPool, SubFreePort, SubIntLink, SubPattern},
     };
     use strum::IntoEnumIterator;
     use variant_count::VariantCount;
@@ -16,6 +16,8 @@ pub mod arith_combinator_graph{
     #[derive(EnumIter,VariantCount)]
     pub enum ArithOp {
         ZERO,
+        POS,
+        NEG,
         INC,
         DEC,
         SUM,
@@ -24,6 +26,8 @@ pub mod arith_combinator_graph{
     pub fn create_op<'a>(op: ArithOp) -> Operation<'a> {
         match op {
            ArithOp::ZERO => Operation::new(1, "ZERO"),
+           ArithOp::POS => Operation::new(2, "POS"),
+           ArithOp::NEG => Operation::new(2, "NEG"),
            ArithOp::INC => Operation::new(2, "INC"),
            ArithOp::DEC => Operation::new(2, "DEC"),
            ArithOp::SUM => Operation::new(3, "SUM"),
@@ -42,13 +46,17 @@ pub mod arith_combinator_graph{
 
     pub fn new_graph<'a>() -> Graph<'a> {
         let mut op_pool = OpPool::new(get_arith_ops());
-        op_pool.add_rule( "INC", ([None,Some("INC")].as_slice(),SubPattern::new()));
-        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),SubPattern::new()));
-        op_pool.add_rule( "ZERO", ([Some("ZERO")].as_slice(),SubPattern::new()));
-        op_pool.add_rule( "SUM", ([None,Some("INC"),Some("ZERO")].as_slice(),SubPattern::new()));
-        op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("INC")].as_slice(),SubPattern::new()));
-        op_pool.add_rule( "SUM", ([None,Some("INC"),Some("INC")].as_slice(),SubPattern::new()));
-        op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("ZERO")].as_slice(),SubPattern::new()));
+
+        let inc_inc_sub: SubPattern = SubPattern{
+            new_nodes_labels: &["POS","POS"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 1,end_port: 0,}],
+            ext_links: &[],
+            free_ports: &[
+                &SubFreePort{node: 1, port: 1},
+                &SubFreePort{node: 0, port: 0},
+            ],
+        };
+        op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),inc_inc_sub));
         Graph::new(op_pool)
     }
 }
