@@ -33,7 +33,8 @@ pub mod operation_pool{
         pub new_nodes_labels: &'a[&'a str],
         pub int_links: &'a [&'a SubIntLink],
         pub ext_links: &'a [(usize,usize)],
-        pub free_ports: &'a[&'a SubFreePort],
+        pub free_ports: &'a[SubFreePort],
+        pub result_node: usize,
     }
 
     pub fn find_applicable_rule<'a>

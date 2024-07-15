@@ -5,9 +5,7 @@ mod operation_pool;
 pub mod arith_combinator_graph{
     use super::
     {
-        graph::graph::Graph, 
-        operation::operations::Operation, 
-        operation_pool::operation_pool::{OpPool, SubFreePort, SubIntLink, SubPattern},
+        graph::graph::Graph, operation::operations::Operation, operation_pool::operation_pool::{OpPool, SubFreePort, SubIntLink, SubPattern}
     };
     use strum::IntoEnumIterator;
     use variant_count::VariantCount;
@@ -44,7 +42,7 @@ pub mod arith_combinator_graph{
         res.into_boxed_slice()
     }
 
-    pub fn new_graph<'a>() -> Graph<'a> {
+    pub fn new_graph() -> Graph<'static> {
         let mut op_pool = OpPool::new(get_arith_ops());
 
         let inc_inc_sub: SubPattern = SubPattern{
@@ -52,11 +50,13 @@ pub mod arith_combinator_graph{
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 1,end_port: 0,}],
             ext_links: &[],
             free_ports: &[
-                &SubFreePort{node: 1, port: 1},
-                &SubFreePort{node: 0, port: 0},
+                SubFreePort{node: 1, port: 1},
+                SubFreePort{node: 0, port: 0},
             ],
+            result_node: 0,
         };
         op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),inc_inc_sub));
         Graph::new(op_pool)
     }
+
 }

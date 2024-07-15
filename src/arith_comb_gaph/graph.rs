@@ -1,12 +1,13 @@
 pub mod graph{
     use core::panic;
     use std::{sync::{Arc, RwLock}, usize, vec};
+    use std::thread;
 
     use crate::arith_comb_gaph::{operation::operations::Operation, operation_pool};
 
     use super::super::operation_pool::operation_pool::*;
 
-    #[derive(Debug)]
+    #[derive(Debug,Clone)]
     pub struct Graph<'a>{
         operations: Arc<RwLock<OpPool<'a>>>,
         nodes: Arc<RwLock<Vec<Node<'a>>>>,
@@ -61,7 +62,31 @@ pub mod graph{
             };
             res
         }
-
+    
+        fn extract_aux_port(&self) ->Vec<Option<usize>>{
+            let arity = self.ports.len();
+            match arity{
+                0 => panic!("invalid arity of node: {}",0),
+                1 => {
+                    vec![self.ports[0]]
+                },
+                _ => {
+                    let mut res = Vec::new();
+                    let main_port = 1;
+                    let mut index = 0;
+                    for port in self.ports.iter(){
+                        if index != main_port{
+                            match port {
+                                None => res.push(None),
+                                Some(i) => res.push(Some(*i)),
+                            }
+                        }
+                        index+=1;
+                    }
+                    res
+                },
+            }
+        }
         
     }
     
@@ -84,7 +109,6 @@ pub mod graph{
                 result: None,
             }
         }
-
 
         fn get_node_linked_to(&self, start_node: usize, link: &Link) -> usize{
             if link.start == start_node{
@@ -166,12 +190,12 @@ pub mod graph{
             }
         }
 
-        fn find_rule_to_apply(&self) -> Option<Box<[RuleInfo]>>{
+        fn find_rule_to_apply(&self) -> Option<Box<[(RuleInfo,usize)]>>{
             let nodes = self.nodes.read().unwrap();
             let operations = self.operations.read().unwrap();
             let links = self.links.read().unwrap();
 
-            let mut rule_to_apply : Vec<RuleInfo>= Vec::new();
+            let mut rule_to_apply : Vec<(RuleInfo,usize)>= Vec::new();
             let mut index =0;
             for node in nodes.iter(){
                 println!("compute node {}", node.op_label);
@@ -205,18 +229,14 @@ pub mod graph{
                                     };
                                     res.into_boxed_slice()
                                 };
-                                if let Some(rule) = 
-                                    operation_pool::operation_pool::find_applicable_rule(
+                                let rule = operation_pool::operation_pool::find_applicable_rule(
                                         &operations,
                                         node.op_label,
-                                        port_op_conf.clone())
+                                        port_op_conf);
 
-                                    // operations.find_applicable_rule(
-                                    //     node.op_label,
-                                    //     &port_op_conf)
-                                {
+                                if let Some(rule) = rule{
                                         println!("found computational step with rule: ");
-                                        rule_to_apply.push(rule.clone());
+                                        rule_to_apply.push((rule,index));
                                 }
                             }
                         }
@@ -231,17 +251,96 @@ pub mod graph{
             }
         }
 
-
-        pub fn compute(&'a mut self){
+        pub fn compute(&'static mut self){
             let rule_to_apply = self.find_rule_to_apply();
+            let mut handler = vec![];
+            let arc_self = Arc::new(&self);
+
             match rule_to_apply{
                 None => {
                 },
                 Some(rules) => {
                     for rule in rules.iter(){
+                        let rule = rule.clone();
+                        let nodes = Arc::clone(&self.nodes);
+                        let operations = Arc::clone(&self.operations);
+                        let links = Arc::clone(&self.links);
+                        let arc_self = Arc::clone(&arc_self);
+
+                        let handle = thread::spawn(move || {
+                            let (rule,node_index) = rule;
+                            let operations = operations.read().unwrap();
+
+                            println!("applying substitution on node: {}",rule.main_node_label);
+
+                            println!("adding the new nodes to the graph");
+                            let mut start_position_new_nodes = None;
+                            {
+                                let mut nodes = nodes.write().unwrap();
+                                start_position_new_nodes = Some(nodes.len());
+                                for op_name in rule.subs.new_nodes_labels{
+                                    let op = operations.find(op_name).unwrap();
+                                    nodes.push(Node::new(op));
+                                }
+                            }
+                            let start_position_new_nodes = start_position_new_nodes.unwrap();
+
+                            println!("adding the new links to the graph");
+                            let mut start_position_new_links = None;
+                            {
+                                let mut links = links.write().unwrap();
+                                let mut nodes = nodes.write().unwrap();
+
+                                let links_start = links.len();
+                                let mut cursor =0;
+                                for link_pattern in rule.subs.int_links{
+                                    let start_node_index = start_position_new_nodes + link_pattern.start;
+                                    let start_node_port = link_pattern.start_port;
+                                    let dst_node_index = start_position_new_nodes + link_pattern.dst;
+                                    let dst_node_port = link_pattern.end_port;
+
+                                    links.push(Link { 
+                                        start: start_node_index, 
+                                        dst: dst_node_index,
+                                        start_port: start_node_port, 
+                                        dst_port: dst_node_port
+                                    });
+                                    nodes[start_node_index].ports[start_node_port] = 
+                                        Some(links_start + cursor);
+                                    nodes[dst_node_index].ports[dst_node_port] =
+                                        Some(links_start + cursor);
+                                    cursor+=1;
+                                };
+                                start_position_new_links = Some(links_start);
+                            }
+                            let start_position_new_links = start_position_new_links.unwrap();
+
+                            println!("linking new nodes to old graph");
+                            {
+                                let nodes = nodes.write().unwrap();
+                                let links = links.write().unwrap();
+
+                                let old_main_node = &nodes[node_index];
+                                let old_aux_node = &nodes[old_main_node.main_port];
+                                let mut old_main_node_aux_port = old_main_node.extract_aux_port();
+                                let mut old_aux_node_aux_port = old_aux_node.extract_aux_port();
+                                old_main_node_aux_port.append(&mut old_aux_node_aux_port);
+
+                                let mut port_index =0;
+                                for free_port in rule.subs.free_ports{
+                                    let link = &links[port_index];
+                                    port_index+=1;
+                                }
+                            }
+                        });
+                        handler.push(handle);
                     }
                 },
             }
+            for handle in handler{
+                handle.join().unwrap();
+            }
+            self.print_graph();
         }
     }
 }
