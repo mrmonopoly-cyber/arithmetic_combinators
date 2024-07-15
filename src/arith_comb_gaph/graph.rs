@@ -1,20 +1,20 @@
 pub mod graph{
     use core::panic;
-    use std::{usize, vec};
+    use std::{sync::{Arc, RwLock}, usize, vec};
 
-    use crate::arith_comb_gaph::operation::operations::Operation;
+    use crate::arith_comb_gaph::{operation::operations::Operation, operation_pool};
 
     use super::super::operation_pool::operation_pool::*;
 
     #[derive(Debug)]
     pub struct Graph<'a>{
-        operations: OpPool<'a>,
-        nodes: Vec<Node<'a>>,
-        links: Vec<Link>,
+        operations: Arc<RwLock<OpPool<'a>>>,
+        nodes: Arc<RwLock<Vec<Node<'a>>>>,
+        links: Arc<RwLock<Vec<Link>>>,
         result: Option<usize>,
     }
 
-    #[derive(Debug,Clone)]
+    #[derive(Debug)]
     pub struct Link {
         start: usize,
         dst: usize,
@@ -65,26 +65,26 @@ pub mod graph{
         
     }
     
+    fn add_link(links: &mut std::sync::RwLockWriteGuard<Vec<Link>>, start_node: usize, dst_node: usize,start_port :usize, dst_node_port: usize){
+        links.push(
+            Link{
+                start: start_node,
+                dst: dst_node,
+                start_port: start_port,
+                dst_port: dst_node_port,
+            }
+        );
+    }
     impl<'a> Graph<'a> {
         pub fn new(ops: OpPool<'a>) -> Self{
             Self{
-                operations: ops,
-                nodes: Vec::new(),
-                links: Vec::new(),
+                operations: Arc::new(RwLock::new(ops)),
+                nodes: Arc::new(RwLock::new(Vec::new())),
+                links: Arc::new(RwLock::new(Vec::new())),
                 result: None,
             }
         }
 
-        fn add_link(&mut self,start_node: usize, dst_node: usize,start_port :usize, dst_node_port: usize){
-            self.links.push(
-                Link{
-                    start: start_node,
-                    dst: dst_node,
-                    start_port: start_port,
-                    dst_port: dst_node_port,
-                }
-            );
-        }
 
         fn get_node_linked_to(&self, start_node: usize, link: &Link) -> usize{
             if link.start == start_node{
@@ -100,17 +100,21 @@ pub mod graph{
 
         pub fn print_graph(&self) {
             println!("GRAPH:========================");
+            let links = & mut self.links.read().unwrap();
+
             let mut node_index = 0;
-            for node in self.nodes.iter(){
+            let nodes = self.nodes.read().unwrap();
+            let operations = self.operations.read().unwrap();
+            for node in nodes.iter(){
                 println!("name: {}", node.op_label);
                 let mut index = 0;
                 for port in node.ports.iter(){
                     if let Some(link) = port{
-                        let link = &self.links[*link];
+                        let link = &links[*link];
                         let dst_node  = self.get_node_linked_to(node_index, &link);
-                        let dst_node = &self.nodes[dst_node];
+                        let dst_node = &nodes[dst_node];
                         print!("port: {}, ",index);
-                        print!("dst: {}, ", self.operations.find(dst_node.op_label).unwrap().label);
+                        print!("dst: {}, ", operations.find(dst_node.op_label).unwrap().label);
                         println!("dst port: {}, ",link.dst_port);
                         println!("============================");
                     }
@@ -119,37 +123,41 @@ pub mod graph{
                 node_index+=1;
             }
 
-            self.operations.print_rules();
+            operations.print_rules();
         }
 
         pub fn attach(&mut self, op_name: &'a str) {
-            let op = self.operations.find(op_name);
+            let nodes = & mut self.nodes.write().unwrap();
+            let operations = self.operations.read().unwrap();
+            let links = &mut self.links.write().unwrap();
+
+            let op = operations.find(op_name);
             match op{
                 None => (),
                 Some(op) =>{
                     let new_node = Node::new(op);
                     let new_node_free_port = new_node.free_port().unwrap();
-                    let new_node_index = self.nodes.len();
-                    self.nodes.push(new_node);
+                    let new_node_index = nodes.len();
+                    nodes.push(new_node);
 
                     match self.result {
                         None =>{
                             return self.result = Some(0);
                         },
                         Some(rn) =>{
-                            let res_free_port = self.nodes[rn].free_port().unwrap();
-                            let new_link_index = self.links.len();
+                            let res_free_port = nodes[rn].free_port().unwrap();
+                            let new_link_index = links.len();
 
-                            self.add_link(rn, new_node_index, res_free_port, new_node_free_port);
+                            add_link(links, rn, new_node_index, res_free_port, new_node_free_port);
 
-                            let res_node = &mut self.nodes[rn];
+                            let res_node = &mut nodes[rn];
                             res_node.ports[res_free_port] = Some(new_link_index);
-                            self.nodes[new_node_index].ports[new_node_free_port] = 
+                            nodes[new_node_index].ports[new_node_free_port] = 
                                 Some(new_link_index);
 
                             if res_free_port == 0{
                                 println!("relinking result to : {}", 
-                                    self.nodes.get(new_node_index).unwrap().op_label);
+                                    nodes.get(new_node_index).unwrap().op_label);
                                 self.result = Some(new_node_index);
                             }
                         },
@@ -158,21 +166,25 @@ pub mod graph{
             }
         }
 
-        fn find_rule_to_apply(&self) -> Option<Box<[&'a RuleInfo]>>{
-            let mut rule_to_apply = Vec::new();
+        fn find_rule_to_apply(&self) -> Option<Box<[RuleInfo]>>{
+            let nodes = self.nodes.read().unwrap();
+            let operations = self.operations.read().unwrap();
+            let links = self.links.read().unwrap();
+
+            let mut rule_to_apply : Vec<RuleInfo>= Vec::new();
             let mut index =0;
-            for node in &self.nodes{
+            for node in nodes.iter(){
                 println!("compute node {}", node.op_label);
                 match &node.ports[node.main_port]{
                     None =>continue,
                     Some(link) =>{
-                        let link = &self.links[*link];
-                        let dst_node_index = self.get_node_linked_to(index, &link);
-                        let dst_node = &self.nodes[dst_node_index];
+                        let link = &links[*link];
+                        let dst_node_index = self.get_node_linked_to(index, link);
+                        let dst_node = &nodes[dst_node_index];
                         println!("found link un main port of node : {} ,on port: {}, to: {}",
                             node.op_label, node.main_port, dst_node.op_label);
                         if let Some(back_link) = &dst_node.ports[dst_node.main_port] {
-                            let back_link = &self.links[*back_link];
+                            let back_link = &links[*back_link];
                             let back_ref_main_node = 
                                 self.get_node_linked_to(dst_node_index, back_link);
 
@@ -183,10 +195,10 @@ pub mod graph{
                                         match port{
                                             None => res.push(None),
                                             Some(link) => {
-                                                let link = &self.links[*link];
+                                                let link = &links[*link];
                                                 let dst_node = 
                                                     self.get_node_linked_to(index, link);
-                                                let dst_node = &self.nodes[dst_node];
+                                                let dst_node = &nodes[dst_node];
                                                 res.push(Some(dst_node.op_label));
                                             },
                                         }
@@ -194,11 +206,17 @@ pub mod graph{
                                     res.into_boxed_slice()
                                 };
                                 if let Some(rule) = 
-                                    self.operations.find_applicable_rule(
+                                    operation_pool::operation_pool::find_applicable_rule(
+                                        &operations,
                                         node.op_label,
-                                        &port_op_conf){
+                                        port_op_conf.clone())
+
+                                    // operations.find_applicable_rule(
+                                    //     node.op_label,
+                                    //     &port_op_conf)
+                                {
                                         println!("found computational step with rule: ");
-                                        rule_to_apply.push(rule);
+                                        rule_to_apply.push(rule.clone());
                                 }
                             }
                         }
