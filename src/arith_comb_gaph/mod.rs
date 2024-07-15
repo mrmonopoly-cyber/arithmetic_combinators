@@ -38,11 +38,10 @@ pub mod arith_combinator_graph{
         for op in ArithOp::iter(){
             res.push(create_op(op));
         };
-
         res.into_boxed_slice()
     }
 
-    pub fn new_graph() -> Graph<'static> {
+    pub fn new_graph() -> Graph<'static > {
         let mut op_pool = OpPool::new(get_arith_ops());
 
         let inc_inc_sub: SubPattern = SubPattern{

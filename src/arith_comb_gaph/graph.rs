@@ -1,6 +1,6 @@
 pub mod graph{
     use core::panic;
-    use std::{sync::{Arc, RwLock}, usize, vec};
+    use std::{sync::{Arc, RwLock}, vec};
     use std::thread;
 
     use crate::arith_comb_gaph::{operation::operations::Operation, operation_pool};
@@ -12,7 +12,7 @@ pub mod graph{
         operations: Arc<RwLock<OpPool<'a>>>,
         nodes: Arc<RwLock<Vec<Node<'a>>>>,
         links: Arc<RwLock<Vec<Link>>>,
-        result: Option<usize>,
+        result: Arc<RwLock<Option<usize>>>,
     }
 
     #[derive(Debug)]
@@ -106,7 +106,7 @@ pub mod graph{
                 operations: Arc::new(RwLock::new(ops)),
                 nodes: Arc::new(RwLock::new(Vec::new())),
                 links: Arc::new(RwLock::new(Vec::new())),
-                result: None,
+                result: Arc::new(RwLock::new(None)),
             }
         }
 
@@ -164,9 +164,12 @@ pub mod graph{
                     let new_node_index = nodes.len();
                     nodes.push(new_node);
 
-                    match self.result {
+                    let mut result = *self.result.read().unwrap();
+
+                    match result{
                         None =>{
-                            return self.result = Some(0);
+                            *self.result.write().unwrap() = Some(0);
+                            return;
                         },
                         Some(rn) =>{
                             let res_free_port = nodes[rn].free_port().unwrap();
@@ -182,13 +185,14 @@ pub mod graph{
                             if res_free_port == 0{
                                 println!("relinking result to : {}", 
                                     nodes.get(new_node_index).unwrap().op_label);
-                                self.result = Some(new_node_index);
+                                *self.result.write().unwrap() = Some(new_node_index);
                             }
                         },
                     }
                 },
             }
         }
+
 
         fn find_rule_to_apply(&self) -> Option<Box<[(RuleInfo,usize)]>>{
             let nodes = self.nodes.read().unwrap();
@@ -251,10 +255,10 @@ pub mod graph{
             }
         }
 
+
         pub fn compute(&'static mut self){
             let rule_to_apply = self.find_rule_to_apply();
             let mut handler = vec![];
-            let arc_self = Arc::new(&self);
 
             match rule_to_apply{
                 None => {
@@ -265,28 +269,52 @@ pub mod graph{
                         let nodes = Arc::clone(&self.nodes);
                         let operations = Arc::clone(&self.operations);
                         let links = Arc::clone(&self.links);
-                        let arc_self = Arc::clone(&arc_self);
+                        let result = Arc::clone(&self.result);
 
                         let handle = thread::spawn(move || {
                             let (rule,node_index) = rule;
+                            let aux_node_index = {
+                                let nodes = nodes.write().unwrap();
+                                let links = links.write().unwrap();
+                                let main_node = &nodes[node_index];
+                                let link_to_aux = main_node.ports[main_node.main_port];
+                                let link = &links[link_to_aux.unwrap()];
+                                println!("node index: {}",node_index);
+                                println!("start link: {}",link.start);
+                                println!("dst link: {}",link.dst);
+                                if link.start == node_index{
+                                    println!("found start");
+                                    Some(link.dst)
+                                }else if link.dst == node_index {
+                                    println!("found dst");
+                                    Some(link.start)
+                                }else{
+                                    println!("found none");
+                                    None
+                                }
+
+                            };
+
+
+
                             let operations = operations.read().unwrap();
 
                             println!("applying substitution on node: {}",rule.main_node_label);
 
                             println!("adding the new nodes to the graph");
-                            let mut start_position_new_nodes = None;
+                            let mut _start_position_new_nodes = None;
                             {
                                 let mut nodes = nodes.write().unwrap();
-                                start_position_new_nodes = Some(nodes.len());
+                                _start_position_new_nodes = Some(nodes.len());
                                 for op_name in rule.subs.new_nodes_labels{
                                     let op = operations.find(op_name).unwrap();
                                     nodes.push(Node::new(op));
                                 }
                             }
-                            let start_position_new_nodes = start_position_new_nodes.unwrap();
+                            let start_position_new_nodes = _start_position_new_nodes.unwrap();
 
                             println!("adding the new links to the graph");
-                            let mut start_position_new_links = None;
+                            let mut _start_position_new_links = None;
                             {
                                 let mut links = links.write().unwrap();
                                 let mut nodes = nodes.write().unwrap();
@@ -311,9 +339,9 @@ pub mod graph{
                                         Some(links_start + cursor);
                                     cursor+=1;
                                 };
-                                start_position_new_links = Some(links_start);
+                                _start_position_new_links = Some(links_start);
                             }
-                            let start_position_new_links = start_position_new_links.unwrap();
+                            let start_position_new_links = _start_position_new_links.unwrap();
 
                             println!("linking new nodes to old graph");
                             {
@@ -328,8 +356,39 @@ pub mod graph{
 
                                 let mut port_index =0;
                                 for free_port in rule.subs.free_ports{
-                                    let link = &links[port_index];
                                     port_index+=1;
+                                }
+
+                            }
+                            println!("deleting old nodes");
+                            {
+                                if let Some(aux_node_index) = aux_node_index{
+                                    println!("deleting old aux");
+                                    let mut nodes = nodes.write().unwrap();
+                                    let old_aux_node = &mut nodes[aux_node_index];
+                                    old_aux_node.ports.fill(None);
+                                }
+                                {
+                                    let mut nodes = nodes.write().unwrap();
+                                    let old_main_node = &mut nodes[node_index];
+                                    old_main_node.ports.fill(None);
+                                }
+                            }
+
+                            {
+                                let mut _result = *result.write().unwrap();
+                                match (_result,node_index){
+                                    (None, _) =>{
+                                        println!("updating result index node to: {}", node_index);
+                                        _result = Some(node_index);
+                                    },
+                                    (Some(m),n) => {
+                                        if n == m {
+                                            println!("updating result index node to: {}", node_index);
+                                            _result = Some(node_index);
+                                        }
+                                    },
+
                                 }
                             }
                         });
