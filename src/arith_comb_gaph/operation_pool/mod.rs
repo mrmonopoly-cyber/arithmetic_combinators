@@ -102,7 +102,6 @@ pub mod operation_pool{
                                 }
                                 index+=1;
                             }
-                            // panic!("op not found for label : {}", op_r)
                         },
                     }
                 }

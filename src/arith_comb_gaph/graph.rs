@@ -158,7 +158,8 @@ pub mod graph{
             }
         }
 
-        pub fn compute(&mut self){
+        fn find_rule_to_apply(&self) -> Option<Box<[&'a RuleInfo]>>{
+            let mut rule_to_apply = Vec::new();
             let mut index =0;
             for node in &self.nodes{
                 println!("compute node {}", node.op_label);
@@ -197,13 +198,31 @@ pub mod graph{
                                         node.op_label,
                                         &port_op_conf){
                                         println!("found computational step with rule: ");
-                                        //TODO: apply substitution
+                                        rule_to_apply.push(rule);
                                 }
                             }
                         }
                     },
                 };
                 index+=1;
+            }
+
+            match rule_to_apply.len(){
+                0 => None,
+                _ => Some(rule_to_apply.into_boxed_slice())
+            }
+        }
+
+
+        pub fn compute(&'a mut self){
+            let rule_to_apply = self.find_rule_to_apply();
+            match rule_to_apply{
+                None => {
+                },
+                Some(rules) => {
+                    for rule in rules.iter(){
+                    }
+                },
             }
         }
     }
