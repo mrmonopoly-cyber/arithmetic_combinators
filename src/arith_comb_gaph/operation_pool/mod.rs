@@ -37,36 +37,35 @@ pub mod operation_pool{
         pub result_node: usize,
     }
 
-    pub fn find_applicable_rule<'a>
-        (operations: &std::sync::RwLockReadGuard<OpPool<'a>>,
-         main_node_label : &'a str,
-         main_port_label : Box<[Option<&'a str>]>,) -> Option<RuleInfo<'a>>  {
+    impl<'a> OpPool<'a> {
+        pub fn find_applicable_rule
+            (&self,
+             main_node_label : &'a str,
+             main_port_label : Box<[Option<&'a str>]>,) -> Option<RuleInfo<'a>>  {
 
-            for rule in operations.rules.iter(){
-                if rule.main_node_label == main_node_label{
-                    let rule_conf_port = {
-                        let mut res = Vec::new();
-                        for port in rule.conf.iter(){
-                            match port{
-                                None => res.push(None),
-                                Some(port) =>{
-                                    let port_label = operations.ops[*port].label;
-                                    res.push(Some(port_label));
-                                },
+                for rule in self.rules.iter(){
+                    if rule.main_node_label == main_node_label{
+                        let rule_conf_port = {
+                            let mut res = Vec::new();
+                            for port in rule.conf.iter(){
+                                match port{
+                                    None => res.push(None),
+                                    Some(port) =>{
+                                        let port_label = self.ops[*port].label;
+                                        res.push(Some(port_label));
+                                    },
+                                };
                             };
+                            res.into_boxed_slice()
                         };
-                        res.into_boxed_slice()
-                    };
-                    if rule_conf_port.eq(&main_port_label) {
-                        return Some(rule.clone())
+                        if rule_conf_port.eq(&main_port_label) {
+                            return Some(rule.clone())
+                        }
                     }
                 }
+                None
             }
-            None
-        }
 
-
-    impl<'a> OpPool<'a> {
         pub fn new(ops: Box<[Operation<'a>]>) -> Self {
             Self{
                 ops: ops,
