@@ -279,6 +279,163 @@ pub mod graph{
 
         }
 
+        fn adding_new_nodes( operations: &Arc<RwLock<OpPool<'a>>>, 
+                nodes : &Arc<RwLock<Vec<Node<'a>>>>,
+                rule: &RuleInfo<'a>)-> usize{
+
+            println!("adding the new nodes to the graph");
+            let operations = operations.read().unwrap();
+            let mut nodes = nodes.write().unwrap();
+            let res = nodes.len();
+
+            for op_name in rule.subs.new_nodes_labels{
+                let op = operations.find(op_name).unwrap();
+                nodes.push(Node::new(op));
+            }
+
+            res
+        }
+
+        fn add_new_links(
+                nodes: &Arc<RwLock<Vec<Node<'a>>>>,
+                links: &Arc<RwLock<Vec<Link>>>,
+                rule: &RuleInfo,
+                start_position_new_nodes: usize
+            ) -> usize{
+
+            println!("adding the new links to the graph");
+            let mut links = links.write().unwrap();
+            let mut nodes = nodes.write().unwrap();
+
+            let links_start = links.len();
+            let mut cursor =0;
+            for link_pattern in rule.subs.int_links{
+                let start_node_index = start_position_new_nodes + link_pattern.start;
+                let start_node_port = link_pattern.start_port;
+                let dst_node_index = start_position_new_nodes + link_pattern.dst;
+                let dst_node_port = link_pattern.end_port;
+
+                links.push(Link { 
+                    start: start_node_index, 
+                    dst: dst_node_index,
+                    start_port: start_node_port, 
+                    dst_port: dst_node_port
+                });
+                println!("adding int link:");
+                println!("start node index: {}", start_node_index);
+                println!("start node port: {}", start_node_port);
+                println!("dst node index: {}", dst_node_index);
+                println!("dst node port: {}", dst_node_port);
+
+                nodes[start_node_index].ports[start_node_port] = 
+                    Some(links_start + cursor);
+                nodes[dst_node_index].ports[dst_node_port] =
+                    Some(links_start + cursor);
+                cursor+=1;
+            };
+            links_start
+        }
+
+        fn link_old_nodes(
+            nodes: &Arc<RwLock<Vec<Node<'a>>>>,
+            links: &Arc<RwLock<Vec<Link>>>,
+            rule: &RuleInfo,
+            node_index : usize,
+            start_position_new_nodes: usize,
+            start_position_new_links: usize,
+            ){
+            println!("linking new nodes to old graph");
+            let mut nodes_w = nodes.write().unwrap();
+            let mut links_w = links.write().unwrap();
+
+            let old_main_node = &nodes_w[node_index];
+            let old_aux_node = &nodes_w[old_main_node.main_port];
+            let mut old_main_node_aux_port = old_main_node.extract_aux_port();
+            let mut old_aux_node_aux_port = old_aux_node.extract_aux_port();
+            old_main_node_aux_port.append(&mut old_aux_node_aux_port);
+
+            let mut port_index =0;
+            for free_port in rule.subs.free_ports{
+                let link_index = old_main_node_aux_port[port_index];
+                let mut index_s = 0;
+                for port in &old_main_node_aux_port{
+                    print!("ext link {}: ",index_s);
+                    match port {
+                        None => println!("None"),
+                        Some(port) => println!("{}",port),
+                    }
+                    index_s+=1;
+                }
+                let new_node_index =
+                    start_position_new_nodes + free_port.node;
+                let node = &mut nodes_w[new_node_index];
+                match link_index{
+                    None => {
+                        node.ports[free_port.port] = None;
+                    },
+                    Some(link_index) => {
+                        let link_index = {
+                            start_position_new_links + link_index
+                        };
+                        node.ports[free_port.port] = Some(link_index);
+                        let link = & mut links_w[link_index];
+                        if link.start == node_index{
+                            link.start = new_node_index;
+                            link.start_port = free_port.port;
+                        }else if link.dst == node_index{
+                            link.dst = new_node_index;
+                            link.dst_port = free_port.port;
+                        }else{
+                            panic!("node index not found in link:
+                                give: {},
+                                found: {} -> {}", 
+                                node_index, link.start,link.dst);
+                        }
+                    },
+                }
+                port_index+=1;
+            }
+        }
+
+        fn delete_disable_nodes(
+            nodes: &Arc<RwLock<Vec<Node<'a>>>>,
+            node_index : usize,
+            aux_node_index: Option<usize>,
+            ){
+
+            println!("disabling old nodes");
+            if let Some(aux_node_index) = aux_node_index{
+                println!("deleting old aux");
+                let mut nodes = nodes.write().unwrap();
+                let old_aux_node = &mut nodes[aux_node_index];
+                old_aux_node.ports.fill(None);
+            }
+            {
+                let mut nodes = nodes.write().unwrap();
+                let old_main_node = &mut nodes[node_index];
+                old_main_node.ports.fill(None);
+            }
+        }
+
+        fn update_result_inde(
+            result: &Arc<RwLock<Option<usize>>>,
+            node_index : usize,
+            ){
+            let mut _result = *result.write().unwrap();
+            match (_result,node_index){
+                (None, _) =>{
+                    println!("updating result index node to: {}", node_index);
+                    _result = Some(node_index);
+                },
+                (Some(m),n) => {
+                    if n == m {
+                        println!("updating result index node to: {}", node_index);
+                        _result = Some(node_index);
+                    }
+                },
+
+            }
+        }
 
         pub fn compute(&'static mut self){
 
@@ -323,144 +480,20 @@ pub mod graph{
                                     let nodes = nodes.read().unwrap();
                                     nodes[node_index].main_port
                                 };
-                                let aux_node_index = linked_to_port(&nodes,&links, node_index,port);
                                 println!("applying substitution on node: {}",rule.main_node_label);
+                                let aux_node_index = linked_to_port(&nodes,&links, node_index,port);
+                                let start_position_new_nodes = 
+                                    Graph::adding_new_nodes(&operations, &nodes, &rule);
 
-                                println!("adding the new nodes to the graph");
-                                let mut _start_position_new_nodes = None;
-                                {
-                                    let operations = operations.read().unwrap();
-                                    let mut nodes = nodes.write().unwrap();
-                                    _start_position_new_nodes = Some(nodes.len());
-                                    for op_name in rule.subs.new_nodes_labels{
-                                        let op = operations.find(op_name).unwrap();
-                                        nodes.push(Node::new(op));
-                                    }
-                                }
-                                let start_position_new_nodes = _start_position_new_nodes.unwrap();
+                                let start_position_new_links = 
+                                    Graph::add_new_links(&nodes, &links, &rule, start_position_new_nodes);
 
-                                let mut _start_position_new_links = None;
-                                println!("adding the new links to the graph");
-                                {
-                                    let mut links = links.write().unwrap();
-                                    let mut nodes = nodes.write().unwrap();
+                                Graph::link_old_nodes(&nodes, &links, &rule, node_index, 
+                                    start_position_new_nodes, start_position_new_links);
 
-                                    let links_start = links.len();
-                                    _start_position_new_links = Some(links_start);
-                                    let mut cursor =0;
-                                    for link_pattern in rule.subs.int_links{
-                                        let start_node_index = start_position_new_nodes + link_pattern.start;
-                                        let start_node_port = link_pattern.start_port;
-                                        let dst_node_index = start_position_new_nodes + link_pattern.dst;
-                                        let dst_node_port = link_pattern.end_port;
+                                Graph::delete_disable_nodes(&nodes, node_index, aux_node_index);
 
-                                        links.push(Link { 
-                                            start: start_node_index, 
-                                            dst: dst_node_index,
-                                            start_port: start_node_port, 
-                                            dst_port: dst_node_port
-                                        });
-                                        println!("adding int link:");
-                                        println!("start node index: {}", start_node_index);
-                                        println!("start node port: {}", start_node_port);
-                                        println!("dst node index: {}", dst_node_index);
-                                        println!("dst node port: {}", dst_node_port);
-
-                                        nodes[start_node_index].ports[start_node_port] = 
-                                            Some(links_start + cursor);
-                                        nodes[dst_node_index].ports[dst_node_port] =
-                                            Some(links_start + cursor);
-                                        cursor+=1;
-                                    };
-                                }
-
-                                println!("linking new nodes to old graph");
-                                {
-                                    let mut nodes_w = nodes.write().unwrap();
-                                    let mut links_w = links.write().unwrap();
-
-                                    let old_main_node = &nodes_w[node_index];
-                                    let old_aux_node = &nodes_w[old_main_node.main_port];
-                                    let mut old_main_node_aux_port = old_main_node.extract_aux_port();
-                                    let mut old_aux_node_aux_port = old_aux_node.extract_aux_port();
-                                    old_main_node_aux_port.append(&mut old_aux_node_aux_port);
-
-                                    let mut port_index =0;
-                                    for free_port in rule.subs.free_ports{
-                                        let link_index = old_main_node_aux_port[port_index];
-                                        let mut index_s = 0;
-                                        for port in &old_main_node_aux_port{
-                                            print!("ext link {}: ",index_s);
-                                            match port {
-                                                None => println!("None"),
-                                                Some(port) => println!("{}",port),
-                                            }
-                                            index_s+=1;
-                                        }
-                                        let new_node_index =
-                                            _start_position_new_nodes.unwrap() + free_port.node;
-                                        let node = &mut nodes_w[new_node_index];
-                                        match link_index{
-                                            None => {
-                                                node.ports[free_port.port] = None;
-                                            },
-                                            Some(link_index) => {
-                                                let link_index = {
-                                                    _start_position_new_links.unwrap() + 
-                                                    link_index
-                                                };
-                                                node.ports[free_port.port] = Some(link_index);
-                                                let link = & mut links_w[link_index];
-                                                if link.start == node_index{
-                                                    link.start = new_node_index;
-                                                    link.start_port = free_port.port;
-                                                }else if link.dst == node_index{
-                                                    link.dst = new_node_index;
-                                                    link.dst_port = free_port.port;
-                                                }else{
-                                                    panic!("node index not found in link:
-                                                        give: {},
-                                                        found: {} -> {}", 
-                                                        node_index, link.start,link.dst);
-                                                }
-                                            },
-                                        }
-
-                                        port_index+=1;
-                                    }
-
-                                }
-                                println!("deleting old nodes");
-                                {
-                                    if let Some(aux_node_index) = aux_node_index{
-                                        println!("deleting old aux");
-                                        let mut nodes = nodes.write().unwrap();
-                                        let old_aux_node = &mut nodes[aux_node_index];
-                                        old_aux_node.ports.fill(None);
-                                    }
-                                    {
-                                        let mut nodes = nodes.write().unwrap();
-                                        let old_main_node = &mut nodes[node_index];
-                                        old_main_node.ports.fill(None);
-                                    }
-                                }
-
-                                {
-                                    let mut _result = *result.write().unwrap();
-                                    match (_result,node_index){
-                                        (None, _) =>{
-                                            println!("updating result index node to: {}", node_index);
-                                            _result = Some(node_index);
-                                        },
-                                        (Some(m),n) => {
-                                            if n == m {
-                                                println!("updating result index node to: {}", node_index);
-                                                _result = Some(node_index);
-                                            }
-                                        },
-
-                                    }
-                                }
+                                Graph::update_result_inde(&result, node_index);
                             });
                             handler.push(handle);
                         }
