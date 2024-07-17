@@ -122,6 +122,18 @@ pub mod graph{
             }
         }
 
+        pub fn print_links(&self){
+            println!("LINKS:========================");
+            let links = self.links.read().unwrap();
+            let mut index =0;
+            for link in links.iter(){
+                println!("link index: {}.",index);
+                println!("node start/dst {} <-> {}.",link.start,link.dst);
+                println!("port start/dst {} <-> {}.",link.start_port,link.dst_port);
+                index+=1;
+            }
+        }
+
         pub fn print_graph(&self) {
             println!("GRAPH:========================");
             let links = & mut self.links.read().unwrap();
@@ -137,7 +149,7 @@ pub mod graph{
                         let link = &links[*link_index];
                         let dst_node_index  = self.get_node_linked_to(node_index, &link);
                         let dst_node = &nodes[dst_node_index];
-                        print!("dst_index: {}, dst: {}, link_index: {}, ",
+                        print!("dst_index_node: {}, dst: {}, link_index: {}, ",
                             dst_node_index,
                             operations.find(dst_node.op_label).unwrap().label,
                             *link_index);
@@ -162,6 +174,7 @@ pub mod graph{
                 node_index+=1;
             }
 
+            self.print_links();
             operations.print_rules();
         }
 
@@ -326,12 +339,14 @@ pub mod graph{
                                 }
                                 let start_position_new_nodes = _start_position_new_nodes.unwrap();
 
+                                let mut _start_position_new_links = None;
                                 println!("adding the new links to the graph");
                                 {
                                     let mut links = links.write().unwrap();
                                     let mut nodes = nodes.write().unwrap();
 
                                     let links_start = links.len();
+                                    _start_position_new_links = Some(links_start);
                                     let mut cursor =0;
                                     for link_pattern in rule.subs.int_links{
                                         let start_node_index = start_position_new_nodes + link_pattern.start;
@@ -373,6 +388,15 @@ pub mod graph{
                                     let mut port_index =0;
                                     for free_port in rule.subs.free_ports{
                                         let link_index = old_main_node_aux_port[port_index];
+                                        let mut index_s = 0;
+                                        for port in &old_main_node_aux_port{
+                                            print!("ext link {}: ",index_s);
+                                            match port {
+                                                None => println!("None"),
+                                                Some(port) => println!("{}",port),
+                                            }
+                                            index_s+=1;
+                                        }
                                         let new_node_index =
                                             _start_position_new_nodes.unwrap() + free_port.node;
                                         let node = &mut nodes_w[new_node_index];
@@ -381,6 +405,10 @@ pub mod graph{
                                                 node.ports[free_port.port] = None;
                                             },
                                             Some(link_index) => {
+                                                let link_index = {
+                                                    _start_position_new_links.unwrap() + 
+                                                    link_index
+                                                };
                                                 node.ports[free_port.port] = Some(link_index);
                                                 let link = & mut links_w[link_index];
                                                 if link.start == node_index{

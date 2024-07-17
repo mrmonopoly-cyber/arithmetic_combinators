@@ -44,17 +44,17 @@ pub mod arith_combinator_graph{
     pub fn new_graph() -> Graph<'static > {
         let mut op_pool = OpPool::new(get_arith_ops());
 
-        let inc_inc_sub: SubPattern = SubPattern{
-            new_nodes_labels: &["POS","POS"],
-            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 1,end_port: 0,}],
+        let zero_inc_sub: SubPattern = SubPattern{
+            new_nodes_labels: &["ZERO","POS"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
             ext_links: &[],
             free_ports: &[
-                SubFreePort{node: 1, port: 1},
                 SubFreePort{node: 0, port: 0},
             ],
             result_node: 0,
         };
-        op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),inc_inc_sub));
+
+        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub));
         Graph::new(op_pool)
     }
 
