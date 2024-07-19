@@ -378,11 +378,13 @@ pub mod graph{
                         node.ports[free_port.port] = None;
                     },
                     Some(link_index) => {
-                        let link_index = {
-                            start_position_new_links + link_index
-                        };
+
                         node.ports[free_port.port] = Some(link_index);
                         let link = & mut links_w[link_index];
+                        println!("node index not found in link:
+                            give: {},
+                            found: {} -> {}", 
+                            node_index, link.start,link.dst);
                         if link.start == node_index{
                             link.start = new_node_index;
                             link.start_port = free_port.port;

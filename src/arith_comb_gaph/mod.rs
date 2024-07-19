@@ -54,7 +54,20 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
-        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub));
+        let pos_inc_sub: SubPattern = SubPattern{
+            new_nodes_labels: &["POS","POS"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 1,end_port: 0,}],
+            ext_links: &[],
+            free_ports: &[
+                SubFreePort{node: 0, port: 0},
+                SubFreePort{node: 1, port: 1},
+            ],
+            result_node: 1,
+        };
+
+        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub.clone()));
+        op_pool.add_rule( "INC", ([Some("INC"),Some("ZERO")].as_slice(),zero_inc_sub));
+        op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),pos_inc_sub));
         Graph::new(op_pool)
     }
 
