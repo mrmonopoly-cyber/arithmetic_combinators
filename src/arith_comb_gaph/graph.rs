@@ -145,34 +145,29 @@ pub mod graph{
                 println!("index: {}, name: {}",node_index, node.op_label);
                 let mut index = 0;
                 for port in node.ports.iter(){
-                    match port{
-                        None =>{
-                            println!("port {}: EMPTY",index);
-                        },
-                        Some(link_index) => {
-                            let link = &links[*link_index];
-                            let dst_node_index  = self.get_node_linked_to(node_index, &link);
-                            let dst_node = &nodes[dst_node_index];
-                            print!("dst_index_node: {}, dst: {}, link_index: {}, ",
-                                dst_node_index,
-                                operations.find(dst_node.op_label).unwrap().label,
-                                *link_index);
-                            print!("port: {}, ",index);
-                            println!("-> port: {}, ",
-                                if link.start == dst_node_index{
-                                    link.start_port
-                                }else if link.dst == dst_node_index{
-                                    link.dst_port
-                                }else{
-                                    panic!("invalid node index:
-                                        given: {},
-                                        have : {} -> {}",
-                                        dst_node_index, link.start, link.dst);
-
-                                }
+                    if let Some(link_index) = port{
+                        let link = &links[*link_index];
+                        let dst_node_index  = self.get_node_linked_to(node_index, &link);
+                        let dst_node = &nodes[dst_node_index];
+                        print!("dst_index_node: {}, dst: {}, link_index: {}, ",
+                            dst_node_index,
+                            operations.find(dst_node.op_label).unwrap().label,
+                            *link_index);
+                        print!("port: {}, ",index);
+                        println!("-> port: {}, ",
+                            if link.start == dst_node_index{
+                                link.start_port
+                            }else if link.dst == dst_node_index{
+                                link.dst_port
+                            }else{
+                                panic!("invalid node index:
+                                    given: {},
+                                    have : {} -> {}",
+                                    dst_node_index, link.start, link.dst);
+                                    
+                            }
                             );
-                            println!("============================");
-                        },
+                        println!("============================");
                     }
                     index+=1;
                 }
@@ -313,12 +308,12 @@ pub mod graph{
             let mut nodes = nodes.write().unwrap();
 
             let links_start = links.len();
+            let mut cursor =0;
             for link_pattern in rule.subs.int_links{
                 let start_node_index = start_position_new_nodes + link_pattern.start;
                 let start_node_port = link_pattern.start_port;
                 let dst_node_index = start_position_new_nodes + link_pattern.dst;
                 let dst_node_port = link_pattern.end_port;
-                let links_start = links.len();
 
                 links.push(Link { 
                     start: start_node_index, 
@@ -333,9 +328,10 @@ pub mod graph{
                 println!("dst node port: {}", dst_node_port);
 
                 nodes[start_node_index].ports[start_node_port] = 
-                    Some(links_start);
+                    Some(links_start + cursor);
                 nodes[dst_node_index].ports[dst_node_port] =
-                    Some(links_start);
+                    Some(links_start + cursor);
+                cursor+=1;
             };
             links_start
         }
@@ -423,19 +419,18 @@ pub mod graph{
 
         fn update_result_inde(
             result: &Arc<RwLock<Option<usize>>>,
-            old_main_index : usize,
-            new_res_node_index : usize,
+            node_index : usize,
             ){
             let mut _result = *result.write().unwrap();
-            match _result{
-                None =>{
-                    println!("updating result index node to: {}", new_res_node_index);
-                    _result = Some(new_res_node_index);
+            match (_result,node_index){
+                (None, _) =>{
+                    println!("updating result index node to: {}", node_index);
+                    _result = Some(node_index);
                 },
-                Some(m) => {
-                    if m == old_main_index {
-                        println!("updating result index node to: {}", new_res_node_index);
-                        _result = Some(new_res_node_index);
+                (Some(m),n) => {
+                    if n == m {
+                        println!("updating result index node to: {}", node_index);
+                        _result = Some(node_index);
                     }
                 },
 
@@ -498,9 +493,7 @@ pub mod graph{
 
                                 Graph::delete_disable_nodes(&nodes, node_index, aux_node_index);
 
-                                Graph::update_result_inde(&result, 
-                                    node_index,
-                                    start_position_new_nodes + rule.subs.result_node);
+                                Graph::update_result_inde(&result, node_index);
                             });
                             handler.push(handle);
                         }
