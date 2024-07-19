@@ -62,32 +62,6 @@ pub mod graph{
             };
             res
         }
-    
-        fn extract_aux_port(&self) ->Vec<Option<usize>>{
-            let arity = self.ports.len();
-            match arity{
-                0 => panic!("invalid arity of node: {}",0),
-                1 => {
-                    vec![self.ports[0]]
-                },
-                _ => {
-                    let mut res = Vec::new();
-                    let main_port = 1;
-                    let mut index = 0;
-                    for port in self.ports.iter(){
-                        if index != main_port{
-                            match port {
-                                None => res.push(None),
-                                Some(i) => res.push(Some(*i)),
-                            }
-                        }
-                        index+=1;
-                    }
-                    res
-                },
-            }
-        }
-        
     }
     
     fn add_link(links: &mut std::sync::RwLockWriteGuard<Vec<Link>>, start_node: usize, dst_node: usize,start_port :usize, dst_node_port: usize){
@@ -344,63 +318,21 @@ pub mod graph{
             nodes: &Arc<RwLock<Vec<Node<'a>>>>,
             links: &Arc<RwLock<Vec<Link>>>,
             rule: &RuleInfo,
-            node_index : usize,
-            start_position_new_nodes: usize,
-            start_position_new_links: usize,
-            ){
-            println!("linking new nodes to old graph");
+            main_node_index: usize,
+            aux_node_index: usize,
+            )
+        {
             let mut nodes_w = nodes.write().unwrap();
-            let mut links_w = links.write().unwrap();
 
-            let old_main_node = &nodes_w[node_index];
-            let old_aux_node = &nodes_w[old_main_node.main_port];
-            let mut old_main_node_aux_port = old_main_node.extract_aux_port();
-            let mut old_aux_node_aux_port = old_aux_node.extract_aux_port();
-            old_main_node_aux_port.append(&mut old_aux_node_aux_port);
+            println!("main node index: {}",main_node_index);
+            println!("aux node index: {}",aux_node_index);
 
-            let mut port_index =0;
-            for free_port in rule.subs.free_ports{
-                let link_index = old_main_node_aux_port[port_index];
-                let mut index_s = 0;
-                for port in &old_main_node_aux_port{
-                    print!("ext link {}: ",index_s);
-                    match port {
-                        None => println!("None"),
-                        Some(port) => println!("{}",port),
-                    }
-                    index_s+=1;
-                }
-                let new_node_index =
-                    start_position_new_nodes + free_port.node;
-                let node = &mut nodes_w[new_node_index];
-                match link_index{
-                    None => {
-                        node.ports[free_port.port] = None;
-                    },
-                    Some(link_index) => {
+            let main_node = &nodes_w[main_node_index];
+            let aux_node = &nodes_w[aux_node_index];
 
-                        node.ports[free_port.port] = Some(link_index);
-                        let link = & mut links_w[link_index];
-                        println!("node index not found in link:
-                            give: {},
-                            found: {} -> {}", 
-                            node_index, link.start,link.dst);
-                        if link.start == node_index{
-                            link.start = new_node_index;
-                            link.start_port = free_port.port;
-                        }else if link.dst == node_index{
-                            link.dst = new_node_index;
-                            link.dst_port = free_port.port;
-                        }else{
-                            panic!("node index not found in link:
-                                give: {},
-                                found: {} -> {}", 
-                                node_index, link.start,link.dst);
-                        }
-                    },
-                }
-                port_index+=1;
-            }
+            println!("main node label: {}",main_node.op_label);
+            println!("aux node label: {}",aux_node.op_label);
+
         }
 
         fn delete_disable_nodes(
@@ -492,11 +424,10 @@ pub mod graph{
                                 let start_position_new_nodes = 
                                     Graph::adding_new_nodes(&operations, &nodes, &rule);
 
-                                let start_position_new_links = 
-                                    Graph::add_new_links(&nodes, &links, &rule, start_position_new_nodes);
+                                Graph::add_new_links(&nodes, &links, &rule, start_position_new_nodes);
 
                                 Graph::link_old_nodes(&nodes, &links, &rule, node_index, 
-                                    start_position_new_nodes, start_position_new_links);
+                                    aux_node_index.unwrap());
 
                                 Graph::delete_disable_nodes(&nodes, node_index, aux_node_index);
 
