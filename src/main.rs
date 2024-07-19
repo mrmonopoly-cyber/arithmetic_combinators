@@ -11,6 +11,7 @@ fn main() {
 
     graph.attach(zero.label);
     graph.attach(inc.label);
+    graph.attach(inc.label);
     // graph.attach(pos.label);
     // graph.attach(inc.label);
     // graph.attach(inc.label);
