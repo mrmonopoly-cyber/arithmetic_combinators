@@ -301,12 +301,6 @@ pub mod graph{
                     start_port: start_node_port, 
                     dst_port: dst_node_port
                 });
-                println!("adding int link:");
-                println!("start node index: {}", start_node_index);
-                println!("start node port: {}", start_node_port);
-                println!("dst node index: {}", dst_node_index);
-                println!("dst node port: {}", dst_node_port);
-
                 nodes[start_node_index].ports[start_node_port] = 
                     Some(links_start);
                 nodes[dst_node_index].ports[dst_node_port] =
@@ -331,14 +325,14 @@ pub mod graph{
             aux_node_index: Option<usize>,
             ){
 
-            println!("disabling old nodes");
             if let Some(aux_node_index) = aux_node_index{
-                println!("deleting old aux");
+                println!("disabling old aux");
                 let mut nodes = nodes.write().unwrap();
                 let old_aux_node = &mut nodes[aux_node_index];
                 old_aux_node.ports.fill(None);
             }
             {
+                println!("disabling old main");
                 let mut nodes = nodes.write().unwrap();
                 let old_main_node = &mut nodes[node_index];
                 old_main_node.ports.fill(None);
