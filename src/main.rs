@@ -12,8 +12,9 @@ fn main() {
     graph.attach(zero.label);
     graph.attach(inc.label);
     graph.attach(inc.label);
-    // graph.attach(pos.label);
+    graph.attach(sum.label);
     // graph.attach(inc.label);
+    graph.attach(zero.label);
 
     graph.print_graph();
 

@@ -3,7 +3,7 @@ pub mod graph{
     use std::{sync::{Arc, RwLock}, vec};
     use std::thread;
 
-    use crate::arith_comb_gaph::operation::operations::Operation;
+    use crate::arith_comb_gaph::operation::operations::{self, Operation};
 
     use super::super::operation_pool::operation_pool::*;
 
@@ -30,6 +30,26 @@ pub mod graph{
         main_port: usize,
         //0 is return port
         //1 is main port if possible, else 0 is main port
+    }
+
+    impl Link{
+        pub fn connected_to(&self, endpoint : usize) -> usize{
+            if self.start == endpoint{
+                self.dst
+            }else if self.dst == endpoint{
+                self.start
+            }else{
+                panic!("endpoint not found:\n
+                    given : {}\n
+                    found: {} -> {}",endpoint,self.start,self.dst);
+            }
+        }
+
+        pub fn print_link(&self){
+            println!("({},{}) -> ({},{})",
+            self.start,self.start_port,
+            self.dst,self.dst_port);
+        }
     }
 
     impl<'a> Node<'a> {
@@ -102,8 +122,7 @@ pub mod graph{
             let mut index =0;
             for link in links.iter(){
                 println!("link index: {}.",index);
-                println!("node start/dst {} <-> {}.",link.start,link.dst);
-                println!("port start/dst {} <-> {}.",link.start_port,link.dst_port);
+                link.print_link();
                 index+=1;
             }
         }
@@ -131,20 +150,8 @@ pub mod graph{
                                 dst_node_index,
                                 operations.find(dst_node.op_label).unwrap().label,
                                 *link_index);
-                            print!("port: {}, ",index);
-                            println!("-> port: {}, ",
-                                if link.start == dst_node_index{
-                                    link.start_port
-                                }else if link.dst == dst_node_index{
-                                    link.dst_port
-                                }else{
-                                    panic!("invalid node index:
-                                        given: {},
-                                        have : {} -> {}",
-                                        dst_node_index, link.start, link.dst);
-
-                                }
-                            );
+                            print!("port index: {},",index);
+                            link.print_link();
                         },
                     }
                     index+=1;
@@ -157,45 +164,86 @@ pub mod graph{
             operations.print_rules();
         }
 
-        pub fn attach(&mut self, op_name: &'a str) {
-            let nodes = & mut self.nodes.write().unwrap();
-            let operations = self.operations.read().unwrap();
-            let links = &mut self.links.write().unwrap();
+        fn attach_v2(&mut self,
+            node_index : usize, 
+            parent_port: Option<usize>, 
+            op_name: &'a str) -> bool {
 
-            let op = operations.find(op_name);
-            match op{
-                None => (),
-                Some(op) =>{
-                    let new_node = Node::new(op);
-                    let new_node_free_port = new_node.free_port().unwrap();
-                    let new_node_index = nodes.len();
-                    nodes.push(new_node);
+            let index_new_node ={
+                let nodes = & mut self.nodes.write().unwrap();
+                nodes.len()
+            };
+            let curr_free_port = {
+                let nodes = & mut self.nodes.write().unwrap();
+                nodes[node_index].free_port()
+            };
 
-                    let result = *self.result.read().unwrap();
+            let curr_arity = {
+                let nodes = & mut self.nodes.write().unwrap();
+                nodes[node_index].ports.len()
+            };
 
-                    match result{
-                        None =>{
-                            *self.result.write().unwrap() = Some(0);
-                            return;
-                        },
-                        Some(rn) =>{
-                            let res_free_port = nodes[rn].free_port().unwrap();
-                            let new_link_index = links.len();
+            match curr_free_port{
+                None => {
+                    let mut res = false;
+                    let mut index = 0;
+                    while !res && (index < curr_arity){
+                        let other_node_index = {
+                            let links = &mut self.links.write().unwrap();
+                            let nodes = self.nodes.read().unwrap();
 
-                            add_link(links, rn, new_node_index, res_free_port, new_node_free_port);
-
-                            let res_node = &mut nodes[rn];
-                            res_node.ports[res_free_port] = Some(new_link_index);
-                            nodes[new_node_index].ports[new_node_free_port] = 
-                                Some(new_link_index);
-
-                            if res_free_port == 0{
-                                println!("relinking result to : {}", 
-                                    nodes.get(new_node_index).unwrap().op_label);
-                                *self.result.write().unwrap() = Some(new_node_index);
+                            let node = &nodes[node_index];
+                            println!("curr node : {}", node.op_label);
+                            let index_link = node.ports[index].unwrap();
+                            let link = &links[index_link];
+                            link.connected_to(node_index)
+                        };
+                        if let Some(parent_port) = parent_port{
+                            println!("parent node: {}", parent_port);
+                            println!("other node: {}", other_node_index);
+                            println!("arity : {}", curr_arity);
+                            if other_node_index != parent_port{
+                                res = self.attach_v2(other_node_index, Some(node_index), op_name);
                             }
-                        },
+                        }else{
+                            res = self.attach_v2(other_node_index, Some(node_index), op_name);
+                        }
+                        index+=1;
                     }
+
+                    res
+                },
+                Some(p) =>{
+                    let nodes = & mut self.nodes.write().unwrap();
+                    let links = &mut self.links.write().unwrap();
+                    let curr_node = &mut nodes[node_index];
+                    let mut new_node = {
+                        let operations = self.operations.read().unwrap();
+                        Node::new(operations.find(op_name).unwrap())
+                    };
+                    let new_link_index = links.len();
+                    add_link(links, index_new_node, node_index,new_node.main_port,p);
+                    new_node.ports[new_node.main_port] = Some(new_link_index);
+                    curr_node.ports[p] = Some(new_link_index);
+                    nodes.push(new_node);
+                    true
+                },
+            }
+        }
+
+        pub fn attach(&mut self, op_name: &'a str) -> bool{
+            let result = *self.result.write().unwrap();
+            match result{
+                None => {
+                    let nodes = & mut self.nodes.write().unwrap();
+                    let operations = self.operations.read().unwrap();
+                    let new_node = Node::new(operations.find(op_name).unwrap());
+                    *self.result.write().unwrap() = Some(0);
+                    nodes.push(new_node);
+                    true
+                },
+                Some(r) => {
+                    self.attach_v2(r, None, op_name)
                 },
             }
         }
