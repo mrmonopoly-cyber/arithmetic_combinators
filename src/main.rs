@@ -7,11 +7,13 @@ fn main() {
     let zero = arith_combinator_graph::create_op(ArithOp::ZERO);
     let inc = arith_combinator_graph::create_op(ArithOp::INC);
     let sum = arith_combinator_graph::create_op(ArithOp::SUM);
+    let pos = arith_combinator_graph::create_op(ArithOp::POS);
 
     graph.attach(zero.label);
-    graph.attach(inc.label);
+    graph.attach(pos.label);
     graph.attach(sum.label);
-    graph.attach(zero.label);
+    // graph.attach(pos.label);
+    // graph.attach(zero.label);
 
     graph.print_graph();
 

@@ -213,6 +213,55 @@ pub mod graph{
 
                     res
                 },
+                Some(0) =>{
+                    let mut res = false;
+
+                    let mut index = 1;
+                    while !res && (index < curr_arity){
+                        let other_node_index = {
+                            let links = &mut self.links.write().unwrap();
+                            let nodes = self.nodes.read().unwrap();
+
+                            let node = &nodes[node_index];
+                            println!("curr node : {}", node.op_label);
+                            let index_link = node.ports[index].unwrap();
+                            let link = &links[index_link];
+                            link.connected_to(node_index)
+                        };
+                        if let Some(parent_port) = parent_port{
+                            println!("parent node: {}", parent_port);
+                            println!("other node: {}", other_node_index);
+                            println!("arity : {}", curr_arity);
+                            if other_node_index != parent_port{
+                                res = self.attach_v2(other_node_index, Some(node_index), op_name);
+                            }
+                        }else{
+                            res = self.attach_v2(other_node_index, Some(node_index), op_name);
+                        }
+                        index+=1;
+                    }
+
+                    if !res{
+                        println!("node not added");
+                        let nodes = & mut self.nodes.write().unwrap();
+                        let links = &mut self.links.write().unwrap();
+                        let curr_node = &mut nodes[node_index];
+                        let mut new_node = {
+                            let operations = self.operations.read().unwrap();
+                            Node::new(operations.find(op_name).unwrap())
+                        };
+                        let new_link_index = links.len();
+                        add_link(links, index_new_node, node_index,0,0);
+                        new_node.ports[0] = Some(new_link_index);
+                        curr_node.ports[0]= Some(new_link_index);
+                        nodes.push(new_node);
+                        let mut _result = *self.result.write().unwrap();
+                        _result = Some(nodes.len()-1);
+                        res = true;
+                    }
+
+                    res
+                },
                 Some(p) =>{
                     let nodes = & mut self.nodes.write().unwrap();
                     let links = &mut self.links.write().unwrap();

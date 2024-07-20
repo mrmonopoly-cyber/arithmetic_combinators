@@ -72,7 +72,7 @@ pub mod arith_combinator_graph{
 
     fn add_sum_rules(op_pool: &mut OpPool){
         let inc_zero_sum_sub: SubPattern = SubPattern{
-            new_nodes_labels: &["SUM","POS"],
+            new_nodes_labels: &["SUM","INC"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 1,}],
             ext_links: &[],
             free_ports: &[
@@ -83,7 +83,8 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
-        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("ZERO")].as_slice(),inc_zero_sum_sub));
+        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("ZERO")].as_slice(),inc_zero_sum_sub.clone()));
+        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub));
     }
     
     pub fn new_graph() -> Graph<'static > {
