@@ -41,9 +41,7 @@ pub mod arith_combinator_graph{
         res.into_boxed_slice()
     }
 
-    pub fn new_graph() -> Graph<'static > {
-        let mut op_pool = OpPool::new(get_arith_ops());
-
+    fn add_inc_rules(op_pool: &mut OpPool){
         let zero_inc_sub: SubPattern = SubPattern{
             new_nodes_labels: &["ZERO","POS"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
@@ -65,6 +63,14 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
+        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub.clone()));
+        op_pool.add_rule( "INC", ([Some("INC"),Some("ZERO")].as_slice(),zero_inc_sub.clone()));
+        op_pool.add_rule( "INC", ([Some("SUM"),Some("ZERO")].as_slice(),zero_inc_sub));
+        op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),pos_inc_sub.clone()));
+        op_pool.add_rule( "INC", ([Some("SUM"),Some("POS")].as_slice(),pos_inc_sub));
+    }
+
+    fn add_sum_rules(op_pool: &mut OpPool){
         let inc_zero_sum_sub: SubPattern = SubPattern{
             new_nodes_labels: &["SUM","POS"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 1,}],
@@ -77,12 +83,17 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
-        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("INC"),Some("ZERO")].as_slice(),zero_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("SUM"),Some("ZERO")].as_slice(),zero_inc_sub));
-        op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),pos_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("SUM"),Some("POS")].as_slice(),pos_inc_sub));
         op_pool.add_rule( "SUM", ([None,Some("POS"),Some("ZERO")].as_slice(),inc_zero_sum_sub));
+    }
+    
+    pub fn new_graph() -> Graph<'static > {
+        let mut op_pool = OpPool::new(get_arith_ops());
+
+
+
+        add_inc_rules(&mut op_pool);
+        add_sum_rules(&mut op_pool);
+
         Graph::new(op_pool)
     }
 
