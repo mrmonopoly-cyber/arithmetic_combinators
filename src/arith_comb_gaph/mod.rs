@@ -3,7 +3,6 @@ mod operation;
 mod operation_pool;
 
 
-
 pub mod arith_combinator_graph{
     static mut GRAPH: once_cell::sync::Lazy<Graph> = once_cell::sync::Lazy::new(|| new_graph());
 
@@ -16,7 +15,7 @@ pub mod arith_combinator_graph{
     use strum_macros::EnumIter;
 
     #[derive(EnumIter,VariantCount)]
-    pub enum ArithOp {
+    enum ArithOp {
         ZERO,
         POS,
         NEG,
@@ -25,7 +24,7 @@ pub mod arith_combinator_graph{
         SUM,
     }
 
-    pub fn create_op<'a>(op: ArithOp) -> Operation<'a> {
+    fn create_op<'a>(op: ArithOp) -> Operation<'a> {
         match op {
            ArithOp::ZERO => Operation::new(1, "ZERO"),
            ArithOp::POS => Operation::new(2, "POS"),
@@ -114,15 +113,31 @@ pub mod arith_combinator_graph{
         Graph::new(op_pool)
     }
 
-    pub fn push_op(op : ArithOp){
+    pub fn push_num(mut num : i32){
+        unsafe {
+            if num > 0{
+                while num != 0{
+                    GRAPH.attach("POS");
+                    num-=1;
+                };
+            }else if num < 0{
+                while num != 0{
+                    GRAPH.attach("NEG");
+                    num+=1;
+                };
+            }
+            GRAPH.attach("ZERO");
+        }
+    }
+
+    pub fn push_op(op : char){
         unsafe {
             match op {
-                ArithOp::ZERO => GRAPH.attach("ZERO"),
-                ArithOp::SUM => GRAPH.attach("SUM"),
-                ArithOp::POS => GRAPH.attach("POS"),
-                ArithOp::NEG => GRAPH.attach("NEG"),
-                ArithOp::INC => GRAPH.attach("INC"),
-                ArithOp::DEC => GRAPH.attach("DEC"),
+                '+' => GRAPH.attach("SUM"),
+                _ => {
+                    println!("operation not implemented");
+                    false
+                }
             };
         }
     }
@@ -144,5 +159,4 @@ pub mod arith_combinator_graph{
             GRAPH.clear();
         }
     }
-
 }
