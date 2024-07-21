@@ -692,5 +692,10 @@ pub mod graph{
             }
         }
 
+        pub fn clear(&mut self){
+            self.nodes.write().unwrap().clear();
+            self.links.write().unwrap().clear();
+            *self.result.write().unwrap() = None;
+        }
     }
 }

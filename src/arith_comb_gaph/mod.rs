@@ -2,7 +2,11 @@ mod graph;
 mod operation;
 mod operation_pool;
 
+
+
 pub mod arith_combinator_graph{
+    static mut GRAPH: once_cell::sync::Lazy<Graph> = once_cell::sync::Lazy::new(|| new_graph());
+
     use super::
     {
         graph::graph::Graph, operation::operations::Operation, operation_pool::operation_pool::{OpPool, SubFreePort, SubIntLink, SubPattern}
@@ -99,7 +103,7 @@ pub mod arith_combinator_graph{
         op_pool.add_rule( "SUM", ([Some("INC"),Some("ZERO"),Some("POS")].as_slice(),zero_zero_sum_sub));
     }
     
-    pub fn new_graph() -> Graph<'static > {
+    fn new_graph() -> Graph<'static > {
         let mut op_pool = OpPool::new(get_arith_ops());
 
 
@@ -108,6 +112,37 @@ pub mod arith_combinator_graph{
         add_sum_rules(&mut op_pool);
 
         Graph::new(op_pool)
+    }
+
+    pub fn push_op(op : ArithOp){
+        unsafe {
+            match op {
+                ArithOp::ZERO => GRAPH.attach("ZERO"),
+                ArithOp::SUM => GRAPH.attach("SUM"),
+                ArithOp::POS => GRAPH.attach("POS"),
+                ArithOp::NEG => GRAPH.attach("NEG"),
+                ArithOp::INC => GRAPH.attach("INC"),
+                ArithOp::DEC => GRAPH.attach("DEC"),
+            };
+        }
+    }
+
+    pub fn compute(){
+        unsafe {
+            GRAPH.compute();
+        }
+    }
+
+    pub fn print_graph(){
+        unsafe {
+            GRAPH.print_graph();
+        }
+    }
+
+    pub fn reset(){
+        unsafe {
+            GRAPH.clear();
+        }
     }
 
 }

@@ -1,23 +1,16 @@
-use arith_comb_gaph::arith_combinator_graph::{self, ArithOp};
+use arith_comb_gaph::arith_combinator_graph::{compute, print_graph, push_op, reset, ArithOp};
 
 mod arith_comb_gaph;
 
 fn main() {
-    let graph = Box::leak(Box::new(arith_combinator_graph::new_graph()));
-    let zero = arith_combinator_graph::create_op(ArithOp::ZERO);
-    let inc = arith_combinator_graph::create_op(ArithOp::INC);
-    let sum = arith_combinator_graph::create_op(ArithOp::SUM);
-    let pos = arith_combinator_graph::create_op(ArithOp::POS);
 
-    graph.attach(sum.label);
-    graph.attach(pos.label);
-    graph.attach(zero.label);
-    graph.attach(pos.label);
-    graph.attach(zero.label);
+    push_op(ArithOp::SUM);
+    push_op(ArithOp::POS);
+    push_op(ArithOp::ZERO);
 
-    // graph.attach(sum.label);
 
-    graph.print_graph();
+    print_graph();
+    compute();
 
-    graph.compute();
+    reset();
 }
