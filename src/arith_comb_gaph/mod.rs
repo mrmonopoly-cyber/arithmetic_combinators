@@ -72,13 +72,13 @@ pub mod arith_combinator_graph{
 
     fn add_sum_rules(op_pool: &mut OpPool){
         let inc_zero_sum_sub: SubPattern = SubPattern{
-            new_nodes_labels: &["SUM","INC"],
-            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 1,}],
+            new_nodes_labels: &["SUM","POS"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
             ext_links: &[],
             free_ports: &[
                 SubFreePort{node: 0, port: 2},
                 SubFreePort{node: 0, port: 1},
-                SubFreePort{node: 1, port: 0},
+                SubFreePort{node: 1, port: 1},
             ],
             result_node: 1,
         };

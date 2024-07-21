@@ -136,9 +136,10 @@ pub mod graph{
                 println!("index: {}, name: {}",node_index, node.op_label);
                 let mut index = 0;
                 for port in node.ports.iter(){
+                    print!("port {}: ",index);
                     match port{
                         None =>{
-                            println!("port {}: EMPTY",index);
+                            println!("EMPTY");
                         },
                         Some(link_index) => {
                             let link = &links[*link_index];
@@ -148,7 +149,6 @@ pub mod graph{
                                 dst_node_index,
                                 operations.find(dst_node.op_label).unwrap().label,
                                 *link_index);
-                            print!("port index: {},",index);
                             link.print_link();
                         },
                     }
