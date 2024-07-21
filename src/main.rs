@@ -9,11 +9,13 @@ fn main() {
     let sum = arith_combinator_graph::create_op(ArithOp::SUM);
     let pos = arith_combinator_graph::create_op(ArithOp::POS);
 
-    graph.attach(zero.label);
-    graph.attach(pos.label);
     graph.attach(sum.label);
-    // graph.attach(pos.label);
-    // graph.attach(zero.label);
+    graph.attach(inc.label);
+    graph.attach(zero.label);
+    graph.attach(inc.label);
+    graph.attach(zero.label);
+
+    graph.attach(sum.label);
 
     graph.print_graph();
 

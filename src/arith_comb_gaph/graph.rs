@@ -67,33 +67,8 @@ pub mod graph{
                 },
             }
         }
+    }
 
-        fn free_port(&self) -> Option<usize> {
-            let mut res = None;
-            let mut index = self.ports.len()-1;
-            for i in self.ports.iter().rev(){
-                if let None = i{
-                    res = Some(index);
-                    break;
-                }
-                if index > 0{
-                    index-=1;
-                }
-            };
-            res
-        }
-    }
-    
-    fn add_link(links: &mut std::sync::RwLockWriteGuard<Vec<Link>>, start_node: usize, dst_node: usize,start_port :usize, dst_node_port: usize){
-        links.push(
-            Link{
-                start: start_node,
-                dst: dst_node,
-                start_port: start_port,
-                dst_port: dst_node_port,
-            }
-        );
-    }
     impl<'a> Graph<'a> {
         pub fn new(ops: OpPool<'a>) -> Self{
             Self{
@@ -101,6 +76,29 @@ pub mod graph{
                 nodes: Arc::new(RwLock::new(Vec::new())),
                 links: Arc::new(RwLock::new(Vec::new())),
                 result: Arc::new(RwLock::new(None)),
+            }
+        }
+
+        fn add_link_v2(&mut self, start_node_index: usize, dst_node_index: usize,start_port :usize, dst_node_port: usize){
+            let mut links = self.links.write().unwrap();
+            let mut nodes = self.nodes.write().unwrap();
+
+            let new_link_index = links.len();
+            let new_link = Link{
+                    start: start_node_index,
+                    dst: dst_node_index,
+                    start_port: start_port,
+                    dst_port: dst_node_port,
+            };
+            links.push(new_link);
+
+            {
+                let start_node = &mut nodes[start_node_index];
+                start_node.ports[start_port] = Some(new_link_index);
+            }
+            {
+                let dst_node = &mut nodes[dst_node_index];
+                dst_node.ports[dst_node_port] = Some(new_link_index);
             }
         }
 
@@ -164,120 +162,63 @@ pub mod graph{
             operations.print_rules();
         }
 
-        fn attach_v2(&mut self,
+        fn attach_v3(&mut self,
             node_index : usize, 
             parent_port: Option<usize>, 
             op_name: &'a str) -> bool {
 
-            let index_new_node ={
-                let nodes = & mut self.nodes.write().unwrap();
-                nodes.len()
-            };
-            let curr_free_port = {
-                let nodes = & mut self.nodes.write().unwrap();
-                nodes[node_index].free_port()
+            let ports = {
+                let nodes = self.nodes.read().unwrap();
+                let curr_node = &nodes[node_index];
+                curr_node.ports.clone()
             };
 
-            let curr_arity = {
-                let nodes = & mut self.nodes.write().unwrap();
-                nodes[node_index].ports.len()
-            };
-
-            match curr_free_port{
-                None => {
-                    let mut res = false;
-                    let mut index = 0;
-                    while !res && (index < curr_arity){
+            let mut index = ports.len()-1;
+            for port in ports.iter().rev(){
+                match port{
+                    None =>{
+                        let new_node= {
+                            let ops = self.operations.read().unwrap();
+                            Node::new(ops.find(op_name).unwrap())
+                        };
+                        let new_node_main_port = new_node.main_port;
+                        let new_node_index = {
+                            let mut nodes = self.nodes.write().unwrap();
+                            nodes.push(new_node);
+                            nodes.len()-1
+                        };
+                        self.add_link_v2(node_index, new_node_index , index, new_node_main_port);
+                        return true;
+                    },
+                    Some(l_i) => {
                         let other_node_index = {
-                            let links = &mut self.links.write().unwrap();
-                            let nodes = self.nodes.read().unwrap();
-
-                            let node = &nodes[node_index];
-                            println!("curr node : {}", node.op_label);
-                            let index_link = node.ports[index].unwrap();
-                            let link = &links[index_link];
+                            let links = self.links.read().unwrap();
+                            let link = &links[*l_i];
                             link.connected_to(node_index)
                         };
-                        if let Some(parent_port) = parent_port{
-                            println!("parent node: {}", parent_port);
-                            println!("other node: {}", other_node_index);
-                            println!("arity : {}", curr_arity);
-                            if other_node_index != parent_port{
-                                res = self.attach_v2(other_node_index, Some(node_index), op_name);
-                            }
-                        }else{
-                            res = self.attach_v2(other_node_index, Some(node_index), op_name);
+                        let mut try_insert = false;
+                        match parent_port {
+                            None => try_insert =
+                                self.attach_v3(other_node_index, Some(node_index), op_name),
+                            Some(parent) =>{
+                                if parent != other_node_index{
+                                    try_insert =
+                                        self.attach_v3(other_node_index, Some(node_index), op_name);
+                                }
+                            },
                         }
-                        index+=1;
-                    }
 
-                    res
-                },
-                Some(0) =>{
-                    let mut res = false;
-
-                    let mut index = 1;
-                    while !res && (index < curr_arity){
-                        let other_node_index = {
-                            let links = &mut self.links.write().unwrap();
-                            let nodes = self.nodes.read().unwrap();
-
-                            let node = &nodes[node_index];
-                            println!("curr node : {}", node.op_label);
-                            let index_link = node.ports[index].unwrap();
-                            let link = &links[index_link];
-                            link.connected_to(node_index)
-                        };
-                        if let Some(parent_port) = parent_port{
-                            println!("parent node: {}", parent_port);
-                            println!("other node: {}", other_node_index);
-                            println!("arity : {}", curr_arity);
-                            if other_node_index != parent_port{
-                                res = self.attach_v2(other_node_index, Some(node_index), op_name);
-                            }
-                        }else{
-                            res = self.attach_v2(other_node_index, Some(node_index), op_name);
+                        if try_insert{
+                            return true;
                         }
-                        index+=1;
-                    }
-
-                    if !res{
-                        println!("node not added");
-                        let nodes = & mut self.nodes.write().unwrap();
-                        let links = &mut self.links.write().unwrap();
-                        let curr_node = &mut nodes[node_index];
-                        let mut new_node = {
-                            let operations = self.operations.read().unwrap();
-                            Node::new(operations.find(op_name).unwrap())
-                        };
-                        let new_link_index = links.len();
-                        add_link(links, index_new_node, node_index,0,0);
-                        new_node.ports[0] = Some(new_link_index);
-                        curr_node.ports[0]= Some(new_link_index);
-                        nodes.push(new_node);
-                        let mut _result = *self.result.write().unwrap();
-                        _result = Some(nodes.len()-1);
-                        res = true;
-                    }
-
-                    res
-                },
-                Some(p) =>{
-                    let nodes = & mut self.nodes.write().unwrap();
-                    let links = &mut self.links.write().unwrap();
-                    let curr_node = &mut nodes[node_index];
-                    let mut new_node = {
-                        let operations = self.operations.read().unwrap();
-                        Node::new(operations.find(op_name).unwrap())
-                    };
-                    let new_link_index = links.len();
-                    add_link(links, index_new_node, node_index,new_node.main_port,p);
-                    new_node.ports[new_node.main_port] = Some(new_link_index);
-                    curr_node.ports[p] = Some(new_link_index);
-                    nodes.push(new_node);
-                    true
-                },
+                    },
+                };
+                if index > 0{
+                    index-=1;
+                }
             }
+
+            false
         }
 
         pub fn attach(&mut self, op_name: &'a str) -> bool{
@@ -292,7 +233,7 @@ pub mod graph{
                     true
                 },
                 Some(r) => {
-                    self.attach_v2(r, None, op_name)
+                    self.attach_v3(r, None, op_name)
                 },
             }
         }
