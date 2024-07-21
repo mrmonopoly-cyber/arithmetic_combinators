@@ -447,6 +447,7 @@ pub mod graph{
                 ext_port_index+=1;
             }
 
+            println!("OK");
             if let Some(ext_links) = rule.subs.ext_links{
                 for link_index in ext_links{
                     let (link_0,link_1) = link_index;
@@ -457,28 +458,77 @@ pub mod graph{
                         (None,Some(l)) | (Some(l),None) => {
                             let links = links.read().unwrap();
                             let link_0 = &links[l];
+                            if  link_0.start == main_node_index || 
+                                link_0.start == aux_node_index
                             {
                                 let nodes =&mut nodes.write().unwrap();
-                                if  link_0.start == main_node_index || 
-                                    link_0.start == aux_node_index
-                                {
-                                        nodes[link_0.dst].ports[link_0.dst_port] = None;
-                                        rule.subs.result_node = link_0.dst;
+                                nodes[link_0.dst].ports[link_0.dst_port] = None;
+                                rule.subs.result_node = link_0.dst;
 
-                                }else if    link_0.dst == main_node_index || 
-                                            link_0.dst == aux_node_index
-                                {
-                                        nodes[link_0.start].ports[link_0.start_port] = None;
-                                        rule.subs.result_node = link_0.start;
-                                }
-                            };
+                            }else if    link_0.dst == main_node_index || 
+                                link_0.dst == aux_node_index
+                            {
+                                let nodes =&mut nodes.write().unwrap();
+                                nodes[link_0.start].ports[link_0.start_port] = None;
+                                rule.subs.result_node = link_0.start;
+                            }
                         },
                         (Some(l_1),Some(l_2)) =>{
+                            let (l_1_r_start,l_1_r_dst,l_2_start,l_2_dst,l_2_start_port, l_2_dst_port) = {
+                                let links_r = links.read().unwrap();
+                                let l_1 = &links_r[l_1];
+                                let l_2 = &links_r[l_2];
+                                (l_1.start,
+                                l_1.dst,
+                                l_2.start,
+                                l_2.dst,
+                                l_2.start_port,
+                                l_2.dst_port
+                                )
+                            };
+
+                            let mut links_w = links.write().unwrap();
+                            let mut nodes_w = nodes.write().unwrap();
+                            let l_1_w = &mut links_w[l_1];
+
+                            if l_1_r_start == l_2_start && 
+                                (l_1_r_start == main_node_index || l_1_r_start == aux_node_index) {
+                                    l_1_w.start = l_2_dst;
+                                    l_1_w.start_port = l_2_dst_port;
+                                    nodes_w[l_2_dst].ports[l_2_dst_port] = Some(l_1);
+                            }else if l_1_r_dst == l_2_dst && 
+                                (l_1_r_dst == main_node_index || l_1_r_dst == aux_node_index) {
+                                    l_1_w.dst = l_2_start;
+                                    l_1_w.dst_port = l_2_start_port;
+                                    nodes_w[l_2_start].ports[l_2_start_port] = Some(l_1);
+                            }else if l_1_r_start == l_2_dst && 
+                                (l_1_r_start == main_node_index || l_1_r_start == aux_node_index) {
+                                    l_1_w.start = l_2_start;
+                                    l_1_w.start_port = l_2_start_port;
+                                    nodes_w[l_2_start].ports[l_2_start_port] = Some(l_1);
+                            }else if l_1_r_dst  == l_2_start && 
+                                (l_1_r_dst == main_node_index || l_1_r_dst == aux_node_index) {
+                                    l_1_w.dst = l_2_dst;
+                                    l_1_w.dst = l_2_dst_port;
+                                    nodes_w[l_2_dst].ports[l_2_dst_port] = Some(l_1);
+                            }else{
+                                panic!("start and dst differ or does not go to main/aux node:
+                                    start_1 : {} -> dst_1: {},
+                                    start_2 : {} -> dst_2: {},
+                                    main: {},
+                                    aux: {}",
+                                    l_1_r_start,l_1_r_dst,
+                                    l_2_start,l_2_dst,
+                                    main_node_index,
+                                    aux_node_index);
+                            }
                         },
                         _ => {},
                     }
                 }
             }
+
+            println!("OK");
 
             if let None = rule.subs.free_ports{
 
