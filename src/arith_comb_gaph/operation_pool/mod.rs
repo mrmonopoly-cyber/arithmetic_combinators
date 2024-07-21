@@ -32,8 +32,8 @@ pub mod operation_pool{
     pub struct SubPattern<'a> {
         pub new_nodes_labels: &'a[&'a str],
         pub int_links: &'a [&'a SubIntLink],
-        pub ext_links: &'a [(usize,usize)],
-        pub free_ports: &'a[SubFreePort],
+        pub ext_links: Option<&'a[(usize,usize)]>,
+        pub free_ports: Option<&'a[SubFreePort]>,
         pub result_node: usize,
     }
 

@@ -45,21 +45,21 @@ pub mod arith_combinator_graph{
         let zero_inc_sub: SubPattern = SubPattern{
             new_nodes_labels: &["ZERO","POS"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
-            ext_links: &[],
-            free_ports: &[
+            ext_links: None,
+            free_ports: Some(&[
                 SubFreePort{node: 1, port: 1},
-            ],
+            ]),
             result_node: 1,
         };
 
         let pos_inc_sub: SubPattern = SubPattern{
             new_nodes_labels: &["POS","POS"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 1,end_port: 0,}],
-            ext_links: &[],
-            free_ports: &[
+            ext_links: None,
+            free_ports: Some(&[
                 SubFreePort{node: 0, port: 0},
                 SubFreePort{node: 1, port: 1},
-            ],
+            ]),
             result_node: 1,
         };
 
@@ -74,17 +74,28 @@ pub mod arith_combinator_graph{
         let inc_zero_sum_sub: SubPattern = SubPattern{
             new_nodes_labels: &["SUM","POS"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
-            ext_links: &[],
-            free_ports: &[
+            ext_links: None,
+            free_ports:Some( &[
                 SubFreePort{node: 0, port: 2},
                 SubFreePort{node: 0, port: 1},
                 SubFreePort{node: 1, port: 1},
-            ],
+            ]),
             result_node: 1,
+        };
+
+        let zero_zero_sum_sub: SubPattern = SubPattern{
+            new_nodes_labels: &[],
+            int_links: &[],
+            ext_links: Some(&[
+                (0,2),
+            ]),
+            free_ports: None,
+            result_node: 0,
         };
 
         op_pool.add_rule( "SUM", ([None,Some("POS"),Some("ZERO")].as_slice(),inc_zero_sum_sub.clone()));
         op_pool.add_rule( "SUM", ([None,Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub));
+        op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("ZERO")].as_slice(),zero_zero_sum_sub));
     }
     
     pub fn new_graph() -> Graph<'static > {

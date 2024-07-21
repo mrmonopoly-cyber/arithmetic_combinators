@@ -352,83 +352,94 @@ pub mod graph{
             links_start
         }
 
+        fn extract_aux_ext_port(node: &Node) -> Vec<Option<usize>> {
+            let mut res = Vec::new();
+            let arity = node.ports.len();
+            println!("Node arity: {}",arity);
+            if arity > 1{
+                let mut index = arity-1;
+                while index>1 {
+                    match node.ports[index]{
+                        None => res.push(None),
+                        Some(i) => {
+                            res.push(Some(i))
+                        }
+                    }
+                    index-=1;
+                }
+            }
+            res
+        }
+
         fn link_old_nodes(
             nodes: &Arc<RwLock<Vec<Node<'a>>>>,
             links: &Arc<RwLock<Vec<Link>>>,
             start_position_new_nodes: usize,
-            rule: &RuleInfo,
+            rule: &mut RuleInfo,
             main_node_index: usize,
             aux_node_index: usize,
             )
         {
-            fn extract_aux_ext_port(node: &Node) -> Vec<Option<usize>> {
-                let mut res = Vec::new();
-                let arity = node.ports.len();
-                println!("Node arity: {}",arity);
-                if arity > 1{
-                    let mut index = arity-1;
-                    while index>1 {
-                        match node.ports[index]{
-                            None => res.push(None),
-                            Some(i) => {
-                                res.push(Some(i))
-                            }
-                        }
-                        index-=1;
-                    }
-                }
-                res
-            }
-
-            let mut nodes_w = nodes.write().unwrap();
-            let mut links_w = links.write().unwrap();
-
             println!("main node index: {}",main_node_index);
             println!("aux node index: {}",aux_node_index);
 
-            let main_node = &nodes_w[main_node_index];
-            let main_arity = main_node.ports.len();
-            let aux_node = &nodes_w[aux_node_index];
-            let aux_arity = aux_node.ports.len();
+            let main_arity =
+            {
+                let nodes_w = nodes.read().unwrap();
+                let main_node = &nodes_w[main_node_index];
+                main_node.ports.len()
+            };
+            let aux_arity = 
+            {
+                let nodes_w = nodes.read().unwrap();
+                let aux_node = &nodes_w[aux_node_index];
+                aux_node.ports.len()
+            };
 
-            println!("main node label: {}",main_node.op_label);
-            println!("aux node label: {}",aux_node.op_label);
+            let ext_ports = {
+                let nodes_w = nodes.read().unwrap();
+                let main_node = &nodes_w[main_node_index];
+                let aux_node = &nodes_w[aux_node_index];
 
-            let mut ext_ports = extract_aux_ext_port(main_node);
-            let mut ext_aux_port_aux = extract_aux_ext_port(aux_node);
-            ext_ports.append(&mut ext_aux_port_aux);
-            if aux_arity > 1{
-                match aux_node.ports[0]{
-                    None => ext_ports.push(None),
-                    Some(i) =>{
-                        ext_ports.push(Some(i));
-                    },
+                let mut ext_ports = Self::extract_aux_ext_port(main_node);
+                let mut ext_aux_port_aux = Self::extract_aux_ext_port(aux_node);
+                ext_ports.append(&mut ext_aux_port_aux);
+                if aux_arity >= 1{
+                    match aux_node.ports[0]{
+                        None => ext_ports.push(None),
+                        Some(i) =>{
+                            ext_ports.push(Some(i));
+                        },
+                    }
                 }
-            }
-            if main_arity > 1{
-                match main_node.ports[0]{
-                    None => ext_ports.push(None),
-                    Some(i) =>{
-                        ext_ports.push(Some(i));
-                    },
+                if main_arity >= 1{
+                    match main_node.ports[0]{
+                        None => ext_ports.push(None),
+                        Some(i) =>{
+                            ext_ports.push(Some(i));
+                        },
+                    }
                 }
-            }
 
-            print!("ext ports: link inde: ");
-            for p in &ext_ports{
-                match p {
-                    None => print!("None\t"),
-                    Some(p) => print!("{}\t",p),
+                print!("ext ports: link inde: ");
+                for p in &ext_ports{
+                    match p {
+                        None => print!("None\t"),
+                        Some(p) => print!("{}\t",p),
+                    }
                 }
-            }
-            println!("");
+                println!("");
+
+                ext_ports
+            };
 
 
             let mut ext_port_index = 0;
             for link_index in ext_ports.iter(){
                 print!("ext port: {}\t", ext_port_index);
                 if let Some(link) = link_index{
-                    let link = &links_w[*link];
+                    let links = links.read().unwrap();
+                    let link = &links[*link];
                     print!("link info: ({},{}) -> ({},{})", 
                         link.start,link.start,link.dst,link.dst_port);
                 }
@@ -436,11 +447,51 @@ pub mod graph{
                 ext_port_index+=1;
             }
 
+            if let Some(ext_links) = rule.subs.ext_links{
+                for link_index in ext_links{
+                    let (link_0,link_1) = link_index;
+                    let link_0 = ext_ports[*link_0];
+                    let link_1 = ext_ports[*link_1];
+
+                    match (link_0,link_1){
+                        (None,Some(l)) | (Some(l),None) => {
+                            let links = links.read().unwrap();
+                            let link_0 = &links[l];
+                            {
+                                let nodes =&mut nodes.write().unwrap();
+                                if  link_0.start == main_node_index || 
+                                    link_0.start == aux_node_index
+                                {
+                                        nodes[link_0.dst].ports[link_0.dst_port] = None;
+                                        rule.subs.result_node = link_0.dst;
+
+                                }else if    link_0.dst == main_node_index || 
+                                            link_0.dst == aux_node_index
+                                {
+                                        nodes[link_0.start].ports[link_0.start_port] = None;
+                                        rule.subs.result_node = link_0.start;
+                                }
+                            };
+                        },
+                        (Some(l_1),Some(l_2)) =>{
+                        },
+                        _ => {},
+                    }
+                }
+            }
+
+            if let None = rule.subs.free_ports{
+
+                return;
+            }
+
+
             let mut ext_port_index = 0;
             for link_index in ext_ports.iter(){
                 if let Some(link_index) = link_index{
-                    let link = &mut links_w[*link_index];
-                    let rule = &rule.subs.free_ports[ext_port_index];
+                    let mut links = links.write().unwrap();
+                    let link = &mut links[*link_index];
+                    let rule = &rule.subs.free_ports.unwrap()[ext_port_index];
                     let new_node_index = start_position_new_nodes + rule.node;
 
                     println!("link: {} -> {}", link.start,link.dst);
@@ -456,7 +507,10 @@ pub mod graph{
                         link.dst = new_node_index;
                         link.dst_port = rule.port;
                     }
-                    nodes_w[new_node_index].ports[rule.port]= Some(*link_index);
+                    {
+                        let mut nodes = nodes.write().unwrap();
+                        nodes[new_node_index].ports[rule.port]= Some(*link_index);
+                    }
                 }
                 ext_port_index+=1;
             }
@@ -482,12 +536,24 @@ pub mod graph{
             }
         }
 
-        fn update_result_inde(
+
+        fn update_result_index(
             result: &Arc<RwLock<Option<usize>>>,
             old_main_index : usize,
-            new_res_node_index : usize,
+            index_start_new_nodes: usize,
+            rule: &RuleInfo,
             ){
             let mut _result = *result.write().unwrap();
+            let new_res_node_index = {
+                match rule.subs.free_ports{
+                    None => {
+                        rule.subs.result_node
+                    },
+                    Some(_) => {
+                        index_start_new_nodes + rule.subs.result_node
+                    },
+                }
+            };
             match _result{
                 None =>{
                     println!("updating result index node to: {}", new_res_node_index);
@@ -502,6 +568,7 @@ pub mod graph{
 
             }
         }
+
 
         pub fn compute(&'static mut self){
 
@@ -541,7 +608,7 @@ pub mod graph{
                             let result = Arc::clone(&self.result);
 
                             let handle = thread::spawn(move || {
-                                let (rule,node_index) = rule;
+                                let (mut rule,node_index) = rule;
                                 let port = {
                                     let nodes = nodes.read().unwrap();
                                     nodes[node_index].main_port
@@ -552,16 +619,17 @@ pub mod graph{
                                     Graph::adding_new_nodes(&operations, &nodes, &rule);
 
                                 Graph::add_new_links(&nodes, &links, &rule, start_position_new_nodes);
-
+                                
                                 Graph::link_old_nodes(&nodes, &links,start_position_new_nodes,
-                                    &rule, node_index, 
+                                    & mut rule, node_index, 
                                     aux_node_index.unwrap());
 
                                 Graph::delete_disable_nodes(&nodes, node_index, aux_node_index);
 
-                                Graph::update_result_inde(&result, 
+                                Graph::update_result_index(&result, 
                                     node_index,
-                                    start_position_new_nodes + rule.subs.result_node);
+                                    start_position_new_nodes,
+                                    &rule);
                             });
                             handler.push(handle);
                         }
@@ -573,5 +641,6 @@ pub mod graph{
                 self.print_graph();
             }
         }
+
     }
 }
