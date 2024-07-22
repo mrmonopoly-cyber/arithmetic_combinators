@@ -321,7 +321,6 @@ pub mod graph{
 
             println!("adding the new links to the graph");
             let mut links = links.write().unwrap();
-            let mut nodes = nodes.write().unwrap();
 
             let links_start = links.len();
             for link_pattern in rule.subs.int_links{
@@ -343,10 +342,13 @@ pub mod graph{
                 println!("dst node index: {}", dst_node_index);
                 println!("dst node port: {}", dst_node_port);
 
-                nodes[start_node_index].ports[start_node_port] = 
-                    Some(links_start);
-                nodes[dst_node_index].ports[dst_node_port] =
-                    Some(links_start);
+                {
+                    let mut nodes = nodes.write().unwrap();
+                    nodes[start_node_index].ports[start_node_port] = 
+                        Some(links_start);
+                    nodes[dst_node_index].ports[dst_node_port] =
+                        Some(links_start);
+                }
             };
             links_start
         }
@@ -588,6 +590,7 @@ pub mod graph{
                     },
                 }
             };
+
             match _result{
                 None =>{
                     println!("updating result index node to: {}", new_res_node_index);
@@ -611,11 +614,13 @@ pub mod graph{
                 links: &Arc<RwLock<Vec<Link>>>,
                 node_index : usize,
                 port: usize) -> Option<usize>{
-                let nodes = nodes.write().unwrap();
                 let links = links.write().unwrap();
-                let main_node = &nodes[node_index];
-                let link_to_aux = main_node.ports[port];
-                let link = &links[link_to_aux.unwrap()];
+                let link ={
+                    let nodes = nodes.read().unwrap();
+                    let main_node = &nodes[node_index];
+                    let link_to_aux = main_node.ports[port];
+                    &links[link_to_aux.unwrap()]
+                };
                 if link.start == node_index{
                     println!("found start");
                     Some(link.dst)
@@ -663,7 +668,8 @@ pub mod graph{
 
                                 Graph::delete_disable_nodes(&nodes, node_index, aux_node_index);
 
-                                Graph::update_result_index(&result, 
+                                Graph::update_result_index(
+                                    &result, 
                                     node_index,
                                     start_position_new_nodes,
                                     &rule);
