@@ -15,7 +15,7 @@ pub mod graph{
         result: Arc<RwLock<Option<usize>>>,
     }
 
-    #[derive(Debug)]
+    #[derive(Debug,Clone)]
     pub struct Link {
         start: usize,
         dst: usize,
@@ -181,13 +181,12 @@ pub mod graph{
                             let ops = self.operations.read().unwrap();
                             Node::new(ops.find(op_name).unwrap())
                         };
-                        let new_node_main_port = new_node.main_port;
                         let new_node_index = {
                             let mut nodes = self.nodes.write().unwrap();
                             nodes.push(new_node);
                             nodes.len()-1
                         };
-                        self.add_link_v2(node_index, new_node_index , index, new_node_main_port);
+                        self.add_link_v2(node_index, new_node_index , index, 0);
                         return true;
                     },
                     Some(l_i) => {
@@ -355,7 +354,7 @@ pub mod graph{
         fn extract_aux_ext_port(node: &Node) -> Vec<Option<usize>> {
             let mut res = Vec::new();
             let arity = node.ports.len();
-            println!("Node arity: {}",arity);
+            println!("Node arity:{} = {}",node.op_label,arity);
             if arity > 1{
                 let mut index = arity-1;
                 while index>1 {
@@ -383,12 +382,6 @@ pub mod graph{
             println!("main node index: {}",main_node_index);
             println!("aux node index: {}",aux_node_index);
 
-            let main_arity =
-            {
-                let nodes_w = nodes.read().unwrap();
-                let main_node = &nodes_w[main_node_index];
-                main_node.ports.len()
-            };
             let aux_arity = 
             {
                 let nodes_w = nodes.read().unwrap();
@@ -404,7 +397,7 @@ pub mod graph{
                 let mut ext_ports = Self::extract_aux_ext_port(main_node);
                 let mut ext_aux_port_aux = Self::extract_aux_ext_port(aux_node);
                 ext_ports.append(&mut ext_aux_port_aux);
-                if aux_arity >= 1{
+                if aux_arity > 1{
                     match aux_node.ports[0]{
                         None => ext_ports.push(None),
                         Some(i) =>{
@@ -412,13 +405,11 @@ pub mod graph{
                         },
                     }
                 }
-                if main_arity >= 1{
-                    match main_node.ports[0]{
-                        None => ext_ports.push(None),
-                        Some(i) =>{
-                            ext_ports.push(Some(i));
-                        },
-                    }
+                match main_node.ports[0]{
+                    None => ext_ports.push(None),
+                    Some(i) =>{
+                        ext_ports.push(Some(i));
+                    },
                 }
 
                 print!("ext ports: link inde: ");
@@ -447,7 +438,6 @@ pub mod graph{
                 ext_port_index+=1;
             }
 
-            println!("OK");
             if let Some(ext_links) = rule.subs.ext_links{
                 for link_index in ext_links{
                     let (link_0,link_1) = link_index;
@@ -474,51 +464,41 @@ pub mod graph{
                             }
                         },
                         (Some(l_1),Some(l_2)) =>{
-                            let (l_1_r_start,l_1_r_dst,l_2_start,l_2_dst,l_2_start_port, l_2_dst_port) = {
-                                let links_r = links.read().unwrap();
-                                let l_1 = &links_r[l_1];
-                                let l_2 = &links_r[l_2];
-                                (l_1.start,
-                                l_1.dst,
-                                l_2.start,
-                                l_2.dst,
-                                l_2.start_port,
-                                l_2.dst_port
-                                )
-                            };
+                            let l_1_r = links.read().unwrap()[l_1].clone();
+                            let l_2 = links.read().unwrap()[l_2].clone();
 
                             let mut links_w = links.write().unwrap();
                             let mut nodes_w = nodes.write().unwrap();
                             let l_1_w = &mut links_w[l_1];
 
-                            if l_1_r_start == l_2_start && 
-                                (l_1_r_start == main_node_index || l_1_r_start == aux_node_index) {
-                                    l_1_w.start = l_2_dst;
-                                    l_1_w.start_port = l_2_dst_port;
-                                    nodes_w[l_2_dst].ports[l_2_dst_port] = Some(l_1);
-                            }else if l_1_r_dst == l_2_dst && 
-                                (l_1_r_dst == main_node_index || l_1_r_dst == aux_node_index) {
-                                    l_1_w.dst = l_2_start;
-                                    l_1_w.dst_port = l_2_start_port;
-                                    nodes_w[l_2_start].ports[l_2_start_port] = Some(l_1);
-                            }else if l_1_r_start == l_2_dst && 
-                                (l_1_r_start == main_node_index || l_1_r_start == aux_node_index) {
-                                    l_1_w.start = l_2_start;
-                                    l_1_w.start_port = l_2_start_port;
-                                    nodes_w[l_2_start].ports[l_2_start_port] = Some(l_1);
-                            }else if l_1_r_dst  == l_2_start && 
-                                (l_1_r_dst == main_node_index || l_1_r_dst == aux_node_index) {
-                                    l_1_w.dst = l_2_dst;
-                                    l_1_w.dst = l_2_dst_port;
-                                    nodes_w[l_2_dst].ports[l_2_dst_port] = Some(l_1);
+                            if l_1_r.start == l_2.start && 
+                                (l_1_r.start == main_node_index || l_1_r.start == aux_node_index) {
+                                    l_1_w.start = l_2.dst;
+                                    l_1_w.start_port = l_2.dst_port;
+                                    nodes_w[l_2.dst].ports[l_2.dst_port] = Some(l_1);
+                            }else if l_1_r.dst == l_2.dst && 
+                                (l_1_r.dst == main_node_index || l_1_r.dst == aux_node_index) {
+                                    l_1_w.dst = l_2.start;
+                                    l_1_w.dst_port = l_2.start_port;
+                                    nodes_w[l_2.start].ports[l_2.start_port] = Some(l_1);
+                            }else if l_1_r.start == l_2.dst && 
+                                (l_1_r.start == main_node_index || l_1_r.start == aux_node_index) {
+                                    l_1_w.start = l_2.start;
+                                    l_1_w.start_port = l_2.start_port;
+                                    nodes_w[l_2.start].ports[l_2.start_port] = Some(l_1);
+                            }else if l_1_r.dst  == l_2.start && 
+                                (l_1_r.dst == main_node_index || l_1_r.dst == aux_node_index) {
+                                    l_1_w.dst = l_2.dst;
+                                    l_1_w.dst = l_2.dst_port;
+                                    nodes_w[l_2.dst].ports[l_2.dst_port] = Some(l_1);
                             }else{
                                 panic!("start and dst differ or does not go to main/aux node:
                                     start_1 : {} -> dst_1: {},
                                     start_2 : {} -> dst_2: {},
                                     main: {},
                                     aux: {}",
-                                    l_1_r_start,l_1_r_dst,
-                                    l_2_start,l_2_dst,
+                                    l_1_r.start,l_1_r.dst,
+                                    l_2.start,l_2.dst,
                                     main_node_index,
                                     aux_node_index);
                             }
@@ -528,10 +508,7 @@ pub mod graph{
                 }
             }
 
-            println!("OK");
-
             if let None = rule.subs.free_ports{
-
                 return;
             }
 
@@ -541,12 +518,14 @@ pub mod graph{
                 if let Some(link_index) = link_index{
                     let mut links = links.write().unwrap();
                     let link = &mut links[*link_index];
-                    let rule = &rule.subs.free_ports.unwrap()[ext_port_index];
-                    let new_node_index = start_position_new_nodes + rule.node;
 
                     println!("link: {} -> {}", link.start,link.dst);
                     println!("main node : {}", main_node_index);
                     println!("aux node : {}", aux_node_index);
+                    println!("ext_port_index : {}", ext_port_index);
+
+                    let rule = &rule.subs.free_ports.unwrap()[ext_port_index];
+                    let new_node_index = start_position_new_nodes + rule.node;
 
                     if link.start == main_node_index || link.start == aux_node_index {
                         link.start = new_node_index;
@@ -560,6 +539,12 @@ pub mod graph{
                     {
                         let mut nodes = nodes.write().unwrap();
                         nodes[new_node_index].ports[rule.port]= Some(*link_index);
+                    }
+
+                    if link.start == link.dst{
+                        let mut nodes = nodes.write().unwrap();
+                        nodes[new_node_index].ports[link.start_port] = None;
+                        nodes[new_node_index].ports[link.dst_port] = None;
                     }
                 }
                 ext_port_index+=1;
@@ -664,6 +649,9 @@ pub mod graph{
                                     nodes[node_index].main_port
                                 };
                                 println!("applying substitution on node: {}",rule.main_node_label);
+                                for lab in rule.subs.new_nodes_labels.iter(){
+                                    println!("{}", lab);
+                                }
                                 let aux_node_index = linked_to_port(&nodes,&links, node_index,port);
                                 let start_position_new_nodes = 
                                     Graph::adding_new_nodes(&operations, &nodes, &rule);

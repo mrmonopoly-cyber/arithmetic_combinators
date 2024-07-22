@@ -70,6 +70,7 @@ pub mod arith_combinator_graph{
         op_pool.add_rule( "INC", ([Some("INC"),Some("ZERO")].as_slice(),zero_inc_sub.clone()));
         op_pool.add_rule( "INC", ([Some("SUM"),Some("ZERO")].as_slice(),zero_inc_sub));
         op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),pos_inc_sub.clone()));
+        op_pool.add_rule( "INC", ([Some("INC"),Some("POS")].as_slice(),pos_inc_sub.clone()));
         op_pool.add_rule( "INC", ([Some("SUM"),Some("POS")].as_slice(),pos_inc_sub));
     }
 
@@ -90,14 +91,17 @@ pub mod arith_combinator_graph{
             new_nodes_labels: &[],
             int_links: &[],
             ext_links: Some(&[
-                (0,2),
+                (0,1),
             ]),
             free_ports: None,
             result_node: 0,
         };
 
         op_pool.add_rule( "SUM", ([None,Some("POS"),Some("ZERO")].as_slice(),inc_zero_sum_sub.clone()));
-        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub));
+        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub.clone()));
+        op_pool.add_rule( "SUM", ([Some("INC"),Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub.clone()));
+        op_pool.add_rule( "SUM", ([Some("SUM"),Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub));
+
         op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("ZERO")].as_slice(),zero_zero_sum_sub.clone()));
         op_pool.add_rule( "SUM", ([Some("INC"),Some("ZERO"),Some("POS")].as_slice(),zero_zero_sum_sub));
     }
@@ -117,12 +121,12 @@ pub mod arith_combinator_graph{
         unsafe {
             if num > 0{
                 while num != 0{
-                    GRAPH.attach("POS");
+                    GRAPH.attach("INC");
                     num-=1;
                 };
             }else if num < 0{
                 while num != 0{
-                    GRAPH.attach("NEG");
+                    GRAPH.attach("DEC");
                     num+=1;
                 };
             }
