@@ -579,7 +579,7 @@ pub mod graph{
             index_start_new_nodes: usize,
             rule: &RuleInfo,
             ){
-            let mut _result = *result.write().unwrap();
+            let mut _result = *result.read().unwrap();
             let new_res_node_index = {
                 match rule.subs.free_ports{
                     None => {
@@ -594,18 +594,60 @@ pub mod graph{
             match _result{
                 None =>{
                     println!("updating result index node to: {}", new_res_node_index);
-                    _result = Some(new_res_node_index);
+                    result.write().unwrap().replace(new_res_node_index);
                 },
                 Some(m) => {
+                    println!("result index : {}", m);
                     if m == old_main_index {
                         println!("updating result index node to: {}", new_res_node_index);
-                        _result = Some(new_res_node_index);
+                        result.write().unwrap().replace(new_res_node_index);
                     }
                 },
 
             }
         }
 
+        pub fn get_result(& mut self) -> Option<i32>{
+            let mut res = None;
+
+            if let Some(r) = *self.result.read().unwrap(){
+                let mut value = 0;
+                let mut next = Some(r);
+                while let Some(node_index) = next{
+                    println!("start res : {}",node_index);
+                    let node = &self.nodes.read().unwrap()[node_index];
+                    match node.op_label{
+                        "ZERO" => break,
+                        "POS" => {
+                            value+=1;
+                            res = Some(value);
+                        },
+                        "NEG" => {
+                            value-=1;
+                            res = Some(value);
+                        },
+                        _ => panic!("invalid reduction"),
+                    }
+
+                    match node.ports[0] {
+                        None => next = None,
+                        Some(n) =>{
+                            let link = &self.links.read().unwrap()[n];
+                            if link.start == node_index{
+                                next = Some(link.dst);
+                            }else if link.dst == node_index{
+                                next = Some(link.start);
+                            }else{
+                                link.print_link();
+                                panic!("invalid link node: {}", node_index);
+                            }
+                        },
+                    }
+                }
+            }
+
+            res
+        }
 
         pub fn compute(&'static mut self){
 

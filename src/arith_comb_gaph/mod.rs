@@ -153,6 +153,12 @@ pub mod arith_combinator_graph{
         }
     }
 
+    pub fn get_result() -> Option<i32>{
+        unsafe {
+            GRAPH.get_result()
+        }
+    }
+
     pub fn print_graph(){
         unsafe {
             GRAPH.print_graph();
