@@ -464,30 +464,29 @@ pub mod graph{
                             }
                         },
                         (Some(l_1),Some(l_2)) =>{
-                            let l_1_r = links.read().unwrap()[l_1].clone();
-                            let l_2 = links.read().unwrap()[l_2].clone();
-
                             let mut links_w = links.write().unwrap();
                             let mut nodes_w = nodes.write().unwrap();
+
+                            let l_2 = links_w[l_2].clone();
                             let l_1_w = &mut links_w[l_1];
 
-                            if l_1_r.start == l_2.start && 
-                                (l_1_r.start == main_node_index || l_1_r.start == aux_node_index) {
+                            if l_1_w.start == l_2.start && 
+                                (l_1_w.start == main_node_index || l_1_w.start == aux_node_index) {
                                     l_1_w.start = l_2.dst;
                                     l_1_w.start_port = l_2.dst_port;
                                     nodes_w[l_2.dst].ports[l_2.dst_port] = Some(l_1);
-                            }else if l_1_r.dst == l_2.dst && 
-                                (l_1_r.dst == main_node_index || l_1_r.dst == aux_node_index) {
+                            }else if l_1_w.dst == l_2.dst && 
+                                (l_1_w.dst == main_node_index || l_1_w.dst == aux_node_index) {
                                     l_1_w.dst = l_2.start;
                                     l_1_w.dst_port = l_2.start_port;
                                     nodes_w[l_2.start].ports[l_2.start_port] = Some(l_1);
-                            }else if l_1_r.start == l_2.dst && 
-                                (l_1_r.start == main_node_index || l_1_r.start == aux_node_index) {
+                            }else if l_1_w.start == l_2.dst && 
+                                (l_1_w.start == main_node_index || l_1_w.start == aux_node_index) {
                                     l_1_w.start = l_2.start;
                                     l_1_w.start_port = l_2.start_port;
                                     nodes_w[l_2.start].ports[l_2.start_port] = Some(l_1);
-                            }else if l_1_r.dst  == l_2.start && 
-                                (l_1_r.dst == main_node_index || l_1_r.dst == aux_node_index) {
+                            }else if l_1_w.dst  == l_2.start && 
+                                (l_1_w.dst == main_node_index || l_1_w.dst == aux_node_index) {
                                     l_1_w.dst = l_2.dst;
                                     l_1_w.dst = l_2.dst_port;
                                     nodes_w[l_2.dst].ports[l_2.dst_port] = Some(l_1);
@@ -497,7 +496,7 @@ pub mod graph{
                                     start_2 : {} -> dst_2: {},
                                     main: {},
                                     aux: {}",
-                                    l_1_r.start,l_1_r.dst,
+                                    l_1_w.start,l_1_w.dst,
                                     l_2.start,l_2.dst,
                                     main_node_index,
                                     aux_node_index);

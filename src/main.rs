@@ -8,8 +8,8 @@ fn main() {
     push_op('+');
     push_num(1);
     push_num(2);
-    // push_op('+');
-    // push_num(3);
+    push_op('+');
+    push_num(3);
     push_num(2);
 
     print_graph();

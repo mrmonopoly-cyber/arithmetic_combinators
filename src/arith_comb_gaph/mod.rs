@@ -69,6 +69,7 @@ pub mod arith_combinator_graph{
         op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub.clone()));
         op_pool.add_rule( "INC", ([Some("INC"),Some("ZERO")].as_slice(),zero_inc_sub.clone()));
         op_pool.add_rule( "INC", ([Some("SUM"),Some("ZERO")].as_slice(),zero_inc_sub));
+
         op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),pos_inc_sub.clone()));
         op_pool.add_rule( "INC", ([Some("INC"),Some("POS")].as_slice(),pos_inc_sub.clone()));
         op_pool.add_rule( "INC", ([Some("SUM"),Some("POS")].as_slice(),pos_inc_sub));
