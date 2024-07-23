@@ -159,7 +159,6 @@ pub mod graph{
             }
 
             self.print_links();
-            operations.print_rules();
         }
 
         fn attach_v3(&mut self,

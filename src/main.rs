@@ -4,16 +4,8 @@ use arith_comb_gaph::arith_combinator_graph::{compute, get_result, print_graph, 
 
 fn main() {
     push_op('+');
-    push_op('+');
-    push_num(12);
-    push_num(15);
-    push_op('+');
-    push_op('+');
-    push_num(19);
-    push_num(37);
-    push_op('+');
-    push_num(71);
-    push_num(68);
+    push_num(3);
+    push_num(0);
 
     print_graph();
     compute();

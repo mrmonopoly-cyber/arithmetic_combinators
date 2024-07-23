@@ -44,7 +44,62 @@ pub mod arith_combinator_graph{
         res.into_boxed_slice()
     }
 
-    fn add_inc_rules(op_pool: &mut OpPool){
+    fn add_all_out_rule_arity_2<'a>(mut op_pool: OpPool<'a>,
+        main_op : &'a str,
+        aux_op: &'a str,
+        sub: SubPattern<'a> ) -> OpPool<'a>{
+
+        op_pool.add_rule( main_op, ([None,Some(aux_op)].as_slice(),sub.clone()));
+        for op in get_arith_ops().iter(){
+            op_pool.add_rule( main_op, ([Some(op.label),Some(aux_op)].as_slice(),sub.clone()));
+        }
+
+        op_pool
+    }
+
+    fn add_all_out_rule_arity_3<'a>(mut op_pool: OpPool<'a>,
+        main_op : &'a str,
+        aux_op: &'a str,
+        aux_op_1: &'a str,
+        sub: SubPattern<'a> ) -> OpPool<'a>{
+
+        op_pool.add_rule( main_op, ([None,Some(aux_op), Some(aux_op_1)].as_slice(),sub.clone()));
+        for op in get_arith_ops().iter(){
+            op_pool.add_rule( main_op, ([Some(op.label),Some(aux_op), Some(aux_op_1)].as_slice(),sub.clone()));
+        }
+
+        op_pool
+    }
+
+    fn add_dec_rules(mut op_pool: OpPool) -> OpPool{
+        let zero_dec_sub: SubPattern = SubPattern{
+            new_nodes_labels: &["ZERO","NEG"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 1, port: 1},
+            ]),
+            result_node: 1,
+        };
+
+        let neg_dec_sub: SubPattern = SubPattern{
+            new_nodes_labels: &["NEG","NEG"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 1,end_port: 0,}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 0, port: 0},
+                SubFreePort{node: 1, port: 1},
+            ]),
+            result_node: 1,
+        };
+
+        op_pool = add_all_out_rule_arity_2(op_pool, "DEC", "ZERO" , zero_dec_sub);
+        op_pool = add_all_out_rule_arity_2(op_pool, "DEC", "NEG" , neg_dec_sub);
+
+        op_pool
+    }
+
+    fn add_inc_rules(mut op_pool: OpPool) -> OpPool{
         let zero_inc_sub: SubPattern = SubPattern{
             new_nodes_labels: &["ZERO","POS"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 0,}],
@@ -66,16 +121,14 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
-        op_pool.add_rule( "INC", ([None,Some("ZERO")].as_slice(),zero_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("INC"),Some("ZERO")].as_slice(),zero_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("SUM"),Some("ZERO")].as_slice(),zero_inc_sub));
 
-        op_pool.add_rule( "INC", ([None,Some("POS")].as_slice(),pos_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("INC"),Some("POS")].as_slice(),pos_inc_sub.clone()));
-        op_pool.add_rule( "INC", ([Some("SUM"),Some("POS")].as_slice(),pos_inc_sub));
+        op_pool = add_all_out_rule_arity_2(op_pool, "INC", "ZERO" , zero_inc_sub);
+        op_pool = add_all_out_rule_arity_2(op_pool, "INC", "POS" , pos_inc_sub);
+
+        op_pool
     }
 
-    fn add_sum_rules(op_pool: &mut OpPool){
+    fn add_sum_rules(mut op_pool: OpPool) -> OpPool{
         let inc_zero_sum_sub: SubPattern = SubPattern{
             new_nodes_labels: &["SUM","INC"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 1,}],
@@ -98,13 +151,12 @@ pub mod arith_combinator_graph{
             result_node: 0,
         };
 
-        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("ZERO")].as_slice(),inc_zero_sum_sub.clone()));
-        op_pool.add_rule( "SUM", ([None,Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub.clone()));
-        op_pool.add_rule( "SUM", ([Some("INC"),Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub.clone()));
-        op_pool.add_rule( "SUM", ([Some("SUM"),Some("POS"),Some("POS")].as_slice(),inc_zero_sum_sub));
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "POS", "ZERO"  , inc_zero_sum_sub.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "POS", "POS"  , inc_zero_sum_sub);
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "ZERO", "ZERO"  , zero_zero_sum_sub.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "ZERO", "POS"  , zero_zero_sum_sub);
 
-        op_pool.add_rule( "SUM", ([None,Some("ZERO"),Some("ZERO")].as_slice(),zero_zero_sum_sub.clone()));
-        op_pool.add_rule( "SUM", ([Some("INC"),Some("ZERO"),Some("POS")].as_slice(),zero_zero_sum_sub));
+        op_pool
     }
     
     fn new_graph() -> Graph<'static > {
@@ -112,8 +164,9 @@ pub mod arith_combinator_graph{
 
 
 
-        add_inc_rules(&mut op_pool);
-        add_sum_rules(&mut op_pool);
+        op_pool = add_inc_rules(op_pool);
+        op_pool = add_dec_rules(op_pool);
+        op_pool = add_sum_rules(op_pool);
 
         Graph::new(op_pool)
     }
