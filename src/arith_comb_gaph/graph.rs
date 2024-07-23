@@ -429,6 +429,22 @@ pub mod graph{
                             }
                         },
                         (Some(l_1),Some(l_2)) =>{
+                            fn find_to_change(link: &Link, main: usize, aux: usize) -> bool{
+                                if link.start == main || link.start == aux{
+                                    true
+                                }else if link.dst == main || link.dst == aux{
+                                    false
+                                }else{
+                                    panic!("main/aux node not found in link:
+                                        start: {} -> dst: {},
+                                        main: {},
+                                        aux: {}",
+                                        link.start,link.dst,
+                                        main,
+                                        aux);
+                                }
+                            }
+
                             let mut links_w = links.write().unwrap();
                             let mut nodes_w = nodes.write().unwrap();
 
@@ -436,32 +452,26 @@ pub mod graph{
                             let l_2 = links_w[l_2].clone();
                             let mut l_1_w = links_w[l_1].clone();
 
-                            if l_1_w.start == l_2.start && 
-                                (l_1_w.start == main_node_index || l_1_w.start == aux_node_index) {
+                            let l_1_change = find_to_change(&l_1_w, main_node_index, aux_node_index);
+                            let l_2_change = find_to_change(&l_2, main_node_index, aux_node_index);
+
+                            match (l_1_change,l_2_change){
+                                (true,true) => {
                                     l_1_w.start = l_2.dst;
                                     l_1_w.start_port = l_2.dst_port;
-                            }else if l_1_w.dst == l_2.dst && 
-                                (l_1_w.dst == main_node_index || l_1_w.dst == aux_node_index) {
-                                    l_1_w.dst = l_2.start;
-                                    l_1_w.dst_port = l_2.start_port;
-                            }else if l_1_w.start == l_2.dst && 
-                                (l_1_w.start == main_node_index || l_1_w.start == aux_node_index) {
+                                },
+                                (true,false) =>{
                                     l_1_w.start = l_2.start;
                                     l_1_w.start_port = l_2.start_port;
-                            }else if l_1_w.dst  == l_2.start && 
-                                (l_1_w.dst == main_node_index || l_1_w.dst == aux_node_index) {
+                                },
+                                (false,true) => {
                                     l_1_w.dst = l_2.dst;
-                                    l_1_w.dst = l_2.dst_port;
-                            }else{
-                                panic!("start and dst differ or does not go to main/aux node:
-                                    start_1 : {} -> dst_1: {},
-                                    start_2 : {} -> dst_2: {},
-                                    main: {},
-                                    aux: {}",
-                                    l_1_w.start,l_1_w.dst,
-                                    l_2.start,l_2.dst,
-                                    main_node_index,
-                                    aux_node_index);
+                                    l_1_w.dst_port= l_2.dst_port;
+                                },
+                                (false,false) => {
+                                    l_1_w.dst = l_2.start;
+                                    l_1_w.dst_port= l_2.start_port;
+                                },
                             }
                             nodes_w[l_1_w.start].ports[l_1_w.start_port] = Some(new_link_index);
                             nodes_w[l_1_w.dst].ports[l_1_w.dst_port] = Some(new_link_index);

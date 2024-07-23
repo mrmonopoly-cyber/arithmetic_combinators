@@ -93,8 +93,19 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
+        let pos_dec_sub: SubPattern = SubPattern{
+            new_nodes_labels: &[],
+            int_links: &[],
+            ext_links: Some(&[
+                (0,1),
+            ]),
+            free_ports: None,
+            result_node: 1,
+        };
+
         op_pool = add_all_out_rule_arity_2(op_pool, "DEC", "ZERO" , zero_dec_sub);
         op_pool = add_all_out_rule_arity_2(op_pool, "DEC", "NEG" , neg_dec_sub);
+        op_pool = add_all_out_rule_arity_2(op_pool, "DEC", "POS" , pos_dec_sub);
 
         op_pool
     }
@@ -121,9 +132,20 @@ pub mod arith_combinator_graph{
             result_node: 1,
         };
 
+        let neg_inc_sub: SubPattern = SubPattern{
+            new_nodes_labels: &[],
+            int_links: &[],
+            ext_links: Some(&[
+                (0,1),
+            ]),
+            free_ports: None,
+            result_node: 1,
+        };
+
 
         op_pool = add_all_out_rule_arity_2(op_pool, "INC", "ZERO" , zero_inc_sub);
         op_pool = add_all_out_rule_arity_2(op_pool, "INC", "POS" , pos_inc_sub);
+        op_pool = add_all_out_rule_arity_2(op_pool, "INC", "NEG" , neg_inc_sub);
 
         op_pool
     }
@@ -131,6 +153,18 @@ pub mod arith_combinator_graph{
     fn add_sum_rules(mut op_pool: OpPool) -> OpPool{
         let inc_zero_sum_sub: SubPattern = SubPattern{
             new_nodes_labels: &["SUM","INC"],
+            int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 1,}],
+            ext_links: None,
+            free_ports:Some( &[
+                SubFreePort{node: 0, port: 2},
+                SubFreePort{node: 0, port: 1},
+                SubFreePort{node: 1, port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        let dec_zero_sum_sub: SubPattern = SubPattern{
+            new_nodes_labels: &["SUM","DEC"],
             int_links: &[&SubIntLink{ start: 0, dst: 1, start_port: 0,end_port: 1,}],
             ext_links: None,
             free_ports:Some( &[
@@ -152,8 +186,15 @@ pub mod arith_combinator_graph{
         };
 
         op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "POS", "ZERO"  , inc_zero_sum_sub.clone());
-        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "POS", "POS"  , inc_zero_sum_sub);
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "POS", "POS"  , inc_zero_sum_sub.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "POS", "NEG"  , inc_zero_sum_sub);
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "NEG", "ZERO"  , dec_zero_sum_sub.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "NEG", "NEG"  , dec_zero_sum_sub.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "NEG", "POS"  , dec_zero_sum_sub.clone());
+
         op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "ZERO", "ZERO"  , zero_zero_sum_sub.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "ZERO", "NEG"  , zero_zero_sum_sub.clone());
         op_pool = add_all_out_rule_arity_3(op_pool, "SUM", "ZERO", "POS"  , zero_zero_sum_sub);
 
         op_pool
