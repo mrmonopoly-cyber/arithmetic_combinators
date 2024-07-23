@@ -125,8 +125,12 @@ pub mod graph{
             }
         }
 
+        pub fn print_rules(& self){
+            self.operations.read().unwrap().print_rules();
+        }
+
         pub fn print_graph(&self) {
-            println!("GRAPH:========================");
+            println!("GRAPH:(out: {})========================",self.result.read().unwrap().unwrap());
             let links = & mut self.links.read().unwrap();
 
             let mut node_index = 0;
@@ -274,6 +278,7 @@ pub mod graph{
 
                 if  link.start_port == start_node.main_port && 
                     link.dst_port == dst_node.main_port {
+                        link.print_link();
 
                         let rule_to_apply = self.find_node_rule(link.start);
                         if let Some(rule) = rule_to_apply{
@@ -326,13 +331,17 @@ pub mod graph{
                 let dst_node_index = start_position_new_nodes + link_pattern.dst;
                 let dst_node_port = link_pattern.end_port;
                 let links_start = links.len();
-
-                links.push(Link { 
+                let link = Link { 
                     start: start_node_index, 
                     dst: dst_node_index,
                     start_port: start_node_port, 
                     dst_port: dst_node_port
-                });
+                };
+
+                print!("------------");
+                link.print_link();
+
+                links.push(link);
                 {
                     let mut nodes = nodes.write().unwrap();
                     nodes[start_node_index].ports[start_node_port] = 
@@ -571,7 +580,6 @@ pub mod graph{
 
         pub fn get_result(& mut self) -> Option<i32>{
             let mut res = None;
-
             if let Some(r) = *self.result.read().unwrap(){
                 let mut value = 0;
                 let mut next = Some(r);
@@ -655,6 +663,7 @@ pub mod graph{
                                     let nodes = nodes.read().unwrap();
                                     nodes[node_index].main_port
                                 };
+                                println!("executing rule: {}",rule.main_node_label);
                                 let aux_node_index = linked_to_port(&nodes,&links, node_index,port);
                                 let start_position_new_nodes = 
                                     Graph::adding_new_nodes(&operations, &nodes, &rule);
@@ -680,6 +689,7 @@ pub mod graph{
                 for handle in handler{
                     handle.join().unwrap();
                 }
+                self.print_graph();
             }
         }
 
