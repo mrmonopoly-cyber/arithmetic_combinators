@@ -432,10 +432,11 @@ pub mod arith_combinator_graph{
         };
 
         let block_rule = SubPattern{
-            new_nodes_labels: &["ZERO"],
+            new_nodes_labels: &["ZERO","ERASER"],
             int_links: &[],
             ext_links: None,
             free_ports: Some(&[
+                SubFreePort{node: 1, port: 0},
                 SubFreePort{node: 0, port: 0},
             ]),
             result_node: 0,
