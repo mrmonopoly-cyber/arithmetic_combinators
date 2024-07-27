@@ -89,7 +89,7 @@ pub fn eval(value: &AST){
 
 fn main() {
 
-    let input = "1 + 2 * 3";
+    let input = "-8 / 9";
 
     let lexer_rules = lexer_rules();
     let lexemes = santiago::lexer::lex(&lexer_rules, &input).unwrap();

@@ -23,6 +23,7 @@ pub mod arith_combinator_graph{
         INC,
         DEC,
         SUM,
+        DIFF,
         MULT,
         DIV,
         DIVINV,
@@ -40,6 +41,7 @@ pub mod arith_combinator_graph{
            ArithOp::INC => Operation::new(2, "INC"),
            ArithOp::DEC => Operation::new(2, "DEC"),
            ArithOp::SUM => Operation::new(3, "SUM"),
+           ArithOp::DIFF => Operation::new(3, "DIFF"),
            ArithOp::MULT=> Operation::new(3, "MULT"),
            ArithOp::DIV => Operation::new(3, "DIV"),
            ArithOp::CLONE=> Operation::new(3, "CLONE"),
@@ -216,6 +218,65 @@ pub mod arith_combinator_graph{
         op_pool
     }
 
+    fn add_diff_rules(mut op_pool: OpPool) -> OpPool{
+        let pos_pos = SubPattern{
+            new_nodes_labels: &["SUM","POS","SIGN",],
+            int_links: &[
+                &SubIntLink{start: 0, start_port: 1, dst: 2,end_port: 0},
+                &SubIntLink{start: 1, start_port: 1, dst: 2,end_port: 1},
+            ],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 0, port: 2},
+                SubFreePort{node: 1, port: 0},
+                SubFreePort{node: 1, port: 0},
+            ]),
+            result_node: 0,
+        };
+
+        let neg_neg = SubPattern{
+            new_nodes_labels: &["SUM","NEG","SIGN",],
+            int_links: &[
+                &SubIntLink{start: 0, start_port: 1, dst: 2,end_port: 0},
+                &SubIntLink{start: 1, start_port: 1, dst: 2,end_port: 1},
+            ],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 0, port: 2},
+                SubFreePort{node: 1, port: 0},
+                SubFreePort{node: 1, port: 0},
+            ]),
+            result_node: 0,
+        };
+
+        let zero_diff = SubPattern{
+            new_nodes_labels: &["SUM","ZERO",],
+            int_links: &[
+                &SubIntLink{start: 0, start_port: 1, dst: 1,end_port: 0},
+            ],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 0, port: 2},
+                SubFreePort{node: 0, port: 0},
+            ]),
+            result_node: 0,
+        };
+
+
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "ZERO", "POS", zero_diff.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "ZERO", "NEG", zero_diff);
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "POS", "POS", pos_pos.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "POS", "NEG", pos_pos.clone());
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "NEG", "POS", neg_neg.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "NEG", "NEG", neg_neg.clone());
+
+
+        op_pool
+    }
+
     fn add_mult_rules(mut op_pool: OpPool) -> OpPool{
         let pos_zero_rule = SubPattern {
             new_nodes_labels: &["ZERO","ZERO"],
@@ -360,17 +421,29 @@ pub mod arith_combinator_graph{
             result_node: 0,
         };
 
-        op_pool.add_rule( "CLONE", ([Some("POS"),Some("POS"), Some("POS")].as_slice(),copy_pos_sub.clone()));
-        op_pool.add_rule( "CLONE", ([Some("NEG"),Some("NEG"), Some("NEG")].as_slice(),copy_neg_sub.clone()));
+        op_pool.add_rule("CLONE",([None,Some("POS"), None].as_slice(),copy_pos_sub.clone()) );
+        op_pool.add_rule("CLONE",([None,Some("NEG"), None].as_slice(),copy_pos_sub.clone()) );
+        op_pool.add_rule("CLONE",([None,Some("ZERO"), None].as_slice(),copy_pos_sub.clone()) );
+        let ops = get_arith_ops();
+        for op_1 in ops.iter(){
+            for op_2 in ops.iter(){
+                op_pool.add_rule("CLONE",([Some(op_1.label),Some("POS"), Some(op_2.label)].as_slice(),copy_pos_sub.clone()) );
+                op_pool.add_rule("CLONE",([Some(op_1.label),Some("NEG"), Some(op_2.label)].as_slice(),copy_neg_sub.clone()) );
+                op_pool.add_rule("CLONE",([Some(op_1.label),Some("ZERO"), Some(op_2.label)].as_slice(),copy_zero_sub.clone()) );
+            }
+        }
 
-        op_pool.add_rule( "CLONE", ([Some("NEG"),Some("ZERO"), Some("NEG")].as_slice(),copy_zero_sub.clone()));
-        op_pool.add_rule( "CLONE", ([Some("POS"),Some("ZERO"), Some("POS")].as_slice(),copy_zero_sub.clone()));
-
-        op_pool.add_rule( "CLONE", ([Some("SIGN"),Some("POS"), Some("DIV")].as_slice(),copy_pos_sub.clone()));
-        
-        op_pool.add_rule( "CLONE", ([Some("NATU"),Some("POS"), Some("LAST")].as_slice(),copy_pos_sub.clone()));
-        op_pool.add_rule( "CLONE", ([Some("NATU"),Some("NEG"), Some("LAST")].as_slice(),copy_neg_sub.clone()));
-        op_pool.add_rule( "CLONE", ([Some("NATU"),Some("ZERO"), Some("LAST")].as_slice(),copy_zero_sub.clone()));
+        // op_pool.add_rule( "CLONE", ([Some("POS"),Some("POS"), Some("POS")].as_slice(),copy_pos_sub.clone()));
+        // op_pool.add_rule( "CLONE", ([Some("NEG"),Some("NEG"), Some("NEG")].as_slice(),copy_neg_sub.clone()));
+        //
+        // op_pool.add_rule( "CLONE", ([Some("NEG"),Some("ZERO"), Some("NEG")].as_slice(),copy_zero_sub.clone()));
+        // op_pool.add_rule( "CLONE", ([Some("POS"),Some("ZERO"), Some("POS")].as_slice(),copy_zero_sub.clone()));
+        //
+        // op_pool.add_rule( "CLONE", ([Some("SIGN"),Some("POS"), Some("DIV")].as_slice(),copy_pos_sub.clone()));
+        // 
+        // op_pool.add_rule( "CLONE", ([Some("NATU"),Some("POS"), Some("LAST")].as_slice(),copy_pos_sub.clone()));
+        // op_pool.add_rule( "CLONE", ([Some("NATU"),Some("NEG"), Some("LAST")].as_slice(),copy_neg_sub.clone()));
+        // op_pool.add_rule( "CLONE", ([Some("NATU"),Some("ZERO"), Some("LAST")].as_slice(),copy_zero_sub.clone()));
 
         op_pool
     }
@@ -657,6 +730,7 @@ pub mod arith_combinator_graph{
         op_pool = add_inc_rules(op_pool);
         op_pool = add_dec_rules(op_pool);
         op_pool = add_sum_rules(op_pool);
+        op_pool = add_diff_rules(op_pool);
         op_pool = add_mult_rules(op_pool);
         op_pool = add_div_inv_rules(op_pool);
 
@@ -684,6 +758,7 @@ pub mod arith_combinator_graph{
         unsafe {
             match op {
                 '+' => GRAPH.attach("SUM"),
+                '-' => GRAPH.attach("DIFF"),
                 '*' => GRAPH.attach("MULT"),
                 '/' => GRAPH.attach("DIV_INV"),
                 _ => {
