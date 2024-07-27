@@ -1,11 +1,11 @@
 mod arith_comb_gaph;
 
-use arith_comb_gaph::arith_combinator_graph::{compute, get_result, print_graph, print_rules, push_num, push_op, reset};
+use arith_comb_gaph::arith_combinator_graph::*;
 
 fn main() {
     push_op('/');
-    push_num(7);
-    push_num(5);
+    push_num(2);
+    push_num(12);
 
     print_graph();
     compute();

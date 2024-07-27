@@ -25,6 +25,7 @@ pub mod arith_combinator_graph{
         SUM,
         MULT,
         DIV,
+        DIVINV,
         SIGN,
         NATU,
         ERASER,
@@ -46,6 +47,7 @@ pub mod arith_combinator_graph{
            ArithOp::NATU=> Operation::new(2, "NATU"),
            ArithOp::ERASER=> Operation::new(1, "ERASER"),
            ArithOp::LAST=> Operation::new(2, "LAST"),
+           ArithOp::DIVINV=> Operation::new(3, "DIV_INV"),
         }
 
     }
@@ -544,6 +546,55 @@ pub mod arith_combinator_graph{
 
         op_pool
     }
+
+    fn add_div_inv_rules(mut op_pool: OpPool) -> OpPool{
+
+        let div_zero = SubPattern{
+            new_nodes_labels: &["ZERO","DIV"],
+            int_links : &[&SubIntLink{start: 0, dst: 1, start_port: 0, end_port: 2}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 1,port: 1},
+                SubFreePort{node: 1,port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        let div_pos = SubPattern{
+            new_nodes_labels: &["POS","DIV"],
+            int_links : &[&SubIntLink{start: 0, dst: 1, start_port: 1, end_port: 2}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 1,port: 1},
+                SubFreePort{node: 0,port: 0},
+                SubFreePort{node: 1,port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        let div_neg = SubPattern{
+            new_nodes_labels: &["NEG","DIV"],
+            int_links : &[&SubIntLink{start: 0, dst: 1, start_port: 1, end_port: 2}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 1,port: 1},
+                SubFreePort{node: 0,port: 0},
+                SubFreePort{node: 1,port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV_INV", "ZERO", "POS", div_zero.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV_INV", "ZERO", "NEG", div_zero);
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV_INV", "POS", "POS", div_pos.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV_INV", "POS", "NEG", div_pos.clone());
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV_INV", "NEG", "NEG", div_neg.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV_INV", "NEG", "POS", div_neg.clone());
+
+        op_pool
+    }
     
     fn new_graph() -> Graph<'static > {
         let mut op_pool = OpPool::new(get_arith_ops());
@@ -552,12 +603,13 @@ pub mod arith_combinator_graph{
         op_pool = add_sign_rules(op_pool);
         op_pool = add_natu_rules(op_pool);
         op_pool = add_last_rules(op_pool);
+        op_pool = add_div_rules(op_pool);
 
         op_pool = add_inc_rules(op_pool);
         op_pool = add_dec_rules(op_pool);
         op_pool = add_sum_rules(op_pool);
         op_pool = add_mult_rules(op_pool);
-        op_pool = add_div_rules(op_pool);
+        op_pool = add_div_inv_rules(op_pool);
 
         Graph::new(op_pool)
     }
@@ -584,7 +636,7 @@ pub mod arith_combinator_graph{
             match op {
                 '+' => GRAPH.attach("SUM"),
                 '*' => GRAPH.attach("MULT"),
-                '/' => GRAPH.attach("DIV"),
+                '/' => GRAPH.attach("DIV_INV"),
                 _ => {
                     println!("operation not implemented");
                     false
