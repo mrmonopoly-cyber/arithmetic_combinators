@@ -470,6 +470,51 @@ pub mod arith_combinator_graph{
             result_node: 2,
         };
 
+        let neg_neg = SubPattern{
+            new_nodes_labels: &["NEG","DIV","SIGN","SIGN"],
+            int_links: &[
+                &SubIntLink{start: 0, dst: 2, start_port: 1, end_port: 1},
+                &SubIntLink{start: 2, dst: 1, start_port: 0, end_port: 1},
+                &SubIntLink{start: 3, dst: 1, start_port: 0, end_port: 2},
+            ],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 3,port: 1},
+                SubFreePort{node: 0,port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        let pos_neg = SubPattern{
+            new_nodes_labels: &["POS","DIV","SIGN","SIGN"],
+            int_links: &[
+                &SubIntLink{start: 0, dst: 1, start_port: 1, end_port: 1},
+                &SubIntLink{start: 2, dst: 1, start_port: 0, end_port: 2},
+                &SubIntLink{start: 3, dst: 1, start_port: 1, end_port: 0},
+            ],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 2,port: 1},
+                SubFreePort{node: 0,port: 0},
+            ]),
+            result_node: 3,
+        };
+
+        let neg_pos = SubPattern{
+            new_nodes_labels: &["NEG","DIV","SIGN","SIGN"],
+            int_links: &[
+                &SubIntLink{start: 0, dst: 2, start_port: 1, end_port: 1},
+                &SubIntLink{start: 2, dst: 1, start_port: 0, end_port: 1},
+                &SubIntLink{start: 3, dst: 1, start_port: 1, end_port: 0},
+            ],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 1,port: 2},
+                SubFreePort{node: 0,port: 0},
+            ]),
+            result_node: 3,
+        };
+
         let pos_pos = SubPattern{
             new_nodes_labels: &["POS","SUM","SIGN","NATU","CLONE","CLONE","DIV","LAST","SUM"],
             int_links: &[
@@ -502,6 +547,10 @@ pub mod arith_combinator_graph{
         op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "ZERO", "NEG", zero_div );
 
         op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "POS", "POS", pos_pos);
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "NEG", "NEG", neg_neg);
+
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "POS", "NEG", pos_neg);
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "NEG", "POS", neg_pos);
 
         op_pool
     }
