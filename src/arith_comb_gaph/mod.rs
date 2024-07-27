@@ -28,6 +28,7 @@ pub mod arith_combinator_graph{
         SIGN,
         NATU,
         ERASER,
+        LAST,
     }
 
     fn create_op<'a>(op: ArithOp) -> Operation<'a> {
@@ -44,6 +45,7 @@ pub mod arith_combinator_graph{
            ArithOp::SIGN=> Operation::new(2, "SIGN"),
            ArithOp::NATU=> Operation::new(2, "NATU"),
            ArithOp::ERASER=> Operation::new(1, "ERASER"),
+           ArithOp::LAST=> Operation::new(2, "LAST"),
         }
 
     }
@@ -362,8 +364,11 @@ pub mod arith_combinator_graph{
         op_pool.add_rule( "CLONE", ([Some("NEG"),Some("ZERO"), Some("NEG")].as_slice(),copy_zero_sub.clone()));
         op_pool.add_rule( "CLONE", ([Some("POS"),Some("ZERO"), Some("POS")].as_slice(),copy_zero_sub.clone()));
 
-        op_pool.add_rule( "CLONE", ([Some("MULT"),Some("POS"), Some("SUM")].as_slice(),copy_pos_sub.clone()));
         op_pool.add_rule( "CLONE", ([Some("SIGN"),Some("POS"), Some("DIV")].as_slice(),copy_pos_sub.clone()));
+        
+        op_pool.add_rule( "CLONE", ([Some("NATU"),Some("POS"), Some("LAST")].as_slice(),copy_pos_sub.clone()));
+        op_pool.add_rule( "CLONE", ([Some("NATU"),Some("NEG"), Some("LAST")].as_slice(),copy_neg_sub.clone()));
+        op_pool.add_rule( "CLONE", ([Some("NATU"),Some("ZERO"), Some("LAST")].as_slice(),copy_zero_sub.clone()));
 
         op_pool
     }
@@ -464,36 +469,78 @@ pub mod arith_combinator_graph{
         };
 
         let pos_pos = SubPattern{
-            new_nodes_labels: &["POS","SUM","DIV","CLONE","SUM","POS","ZERO","NATU","SIGN"],
+            new_nodes_labels: &["POS","SUM","SIGN","NATU","CLONE","CLONE","DIV","LAST","SUM"],
             int_links: &[
                 //SUM
-                &SubIntLink{start: 1, start_port: 0, dst: 7, end_port: 1},
-                &SubIntLink{start: 1, start_port: 1, dst: 0, end_port: 1},
+                &SubIntLink{start: 1, dst: 0,start_port: 1, end_port: 1},
+                &SubIntLink{start: 1, dst: 2,start_port: 2, end_port: 0},
+                &SubIntLink{start: 1, dst: 5,start_port: 0, end_port: 1},
+                //CLONE
+                &SubIntLink{start: 4, start_port: 0, dst: 2, end_port: 1},
+                &SubIntLink{start: 4, start_port: 2, dst: 6, end_port: 2},
+                //CLONE
+                &SubIntLink{start: 5, start_port: 2, dst: 7, end_port: 1},
+                &SubIntLink{start: 5, start_port: 0, dst: 3, end_port: 1},
                 //DIV
-                &SubIntLink{start: 2, start_port: 0, dst: 4, end_port: 1},
-                &SubIntLink{start: 2, start_port: 1, dst: 7, end_port: 0},
-                &SubIntLink{start: 2, start_port: 2, dst: 3, end_port: 2},
+                &SubIntLink{start: 6, start_port: 1, dst: 3, end_port: 0},
                 //SUM
-                &SubIntLink{start: 4, start_port: 2, dst: 5, end_port: 1},
-                //POS
-                &SubIntLink{start: 5, start_port: 0, dst: 6, end_port: 0},
-                //SIGN
-                &SubIntLink{start: 8, start_port: 0, dst: 1, end_port: 2},
-                &SubIntLink{start: 8, start_port: 1, dst: 3, end_port: 0},
+                &SubIntLink{start: 8, start_port: 2, dst: 7, end_port: 0},
+                &SubIntLink{start: 8, start_port: 1, dst: 6, end_port: 0},
             ],
             ext_links: None,
             free_ports: Some(&[
-                SubFreePort{node: 3, port: 1},
+                SubFreePort{node: 4, port: 1},
                 SubFreePort{node: 0, port: 0},
-                SubFreePort{node: 4, port: 0},
+                SubFreePort{node: 8, port: 0},
             ]),
-            result_node: 4,
+            result_node: 8,
         };
 
         op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "ZERO", "POS", zero_div.clone() );
         op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "ZERO", "NEG", zero_div );
 
         op_pool = add_all_out_rule_arity_3(op_pool, "DIV", "POS", "POS", pos_pos);
+
+        op_pool
+    }
+
+    fn add_last_rules(mut op_pool: OpPool) -> OpPool{
+        let last_pos = SubPattern{
+            new_nodes_labels: &["ERASER","POS","ZERO"],
+            int_links : &[&SubIntLink{start: 1, dst: 2, start_port: 0, end_port: 0}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 0,port: 0},
+                SubFreePort{node: 1,port: 1},
+            ]),
+            result_node: 1,
+        };
+
+        let last_neg = SubPattern{
+            new_nodes_labels: &["ERASER","ZERO"],
+            int_links : &[],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 0,port: 0},
+                SubFreePort{node: 1,port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        let last_zero = SubPattern{
+            new_nodes_labels: &["ERASER","POS","ZERO"],
+            int_links : &[&SubIntLink{start: 1, dst: 2, start_port: 0, end_port: 0}],
+            ext_links: None,
+            free_ports: Some(&[
+                SubFreePort{node: 1,port: 1},
+                SubFreePort{node: 0,port: 0},
+            ]),
+            result_node: 1,
+        };
+
+        op_pool = add_all_out_rule_arity_2(op_pool, "LAST", "POS", last_pos);
+        op_pool = add_all_out_rule_arity_2(op_pool, "LAST", "NEG", last_neg);
+        op_pool = add_all_out_rule_arity_2(op_pool, "LAST", "ZERO", last_zero);
 
         op_pool
     }
@@ -504,6 +551,7 @@ pub mod arith_combinator_graph{
         op_pool = add_copy_rules(op_pool);
         op_pool = add_sign_rules(op_pool);
         op_pool = add_natu_rules(op_pool);
+        op_pool = add_last_rules(op_pool);
 
         op_pool = add_inc_rules(op_pool);
         op_pool = add_dec_rules(op_pool);
