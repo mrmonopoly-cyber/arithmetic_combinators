@@ -15,6 +15,8 @@ pub enum AST {
     OperatorSubtract,
     OperatorMultiply,
     OperatorDivide,
+    OperatorOpenPar,
+    OperatorClosePar,
 }
 
 pub fn lexer_rules() -> LexerRules {
@@ -24,6 +26,8 @@ pub fn lexer_rules() -> LexerRules {
         "DEFAULT" | "-" = string "-";
         "DEFAULT" | "*" = string "*";
         "DEFAULT" | "/" = string "/";
+        "DEFAULT" | "(" = string "(";
+        "DEFAULT" | ")" = string ")";
         "DEFAULT" | "WS" = pattern r"\s" => |lexer| lexer.skip();
     )
 }
@@ -40,9 +44,11 @@ pub fn grammar() -> Grammar<AST> {
             AST::BinaryOperation;
         "expr" => rules "expr" "divide" "expr" =>
             AST::BinaryOperation;
+        "expr" => rules "open_par" "expr" "close_par" =>
+            AST::BinaryOperation;
+
         "expr" => rules "subtract" "expr" =>
             AST::UnaryOperator;
-
 
         "add" => lexemes "+" =>
             |_| AST::OperatorAdd;
@@ -52,6 +58,13 @@ pub fn grammar() -> Grammar<AST> {
             |_| AST::OperatorMultiply;
         "divide" => lexemes "/" =>
             |_| AST::OperatorDivide;
+
+        "open_par" => lexemes "(" =>
+            |_| AST::OperatorOpenPar;
+
+        "close_par" => lexemes ")" =>
+            |_| AST::OperatorClosePar;
+
 
         "int" => lexemes "INT" =>
             |lexemes| {
@@ -72,20 +85,27 @@ pub fn eval(value: &AST){
             match &args[1] {
                 AST::OperatorAdd => {
                     push_op('+');
+                    eval(&args[0]);
+                    eval(&args[2]);
                 },
                 AST::OperatorSubtract => {
                     push_op('-');
+                    eval(&args[0]);
+                    eval(&args[2]);
                 },
                 AST::OperatorMultiply =>{
                     push_op('*');
+                    eval(&args[0]);
+                    eval(&args[2]);
                 },
                 AST::OperatorDivide => {
                     push_op('/');
+                    eval(&args[0]);
+                    eval(&args[2]);
                 },
-                _ => unreachable!(),
+
+                _ => eval(&args[1]),
             };
-            eval(&args[0]);
-            eval(&args[2]);
         },
         AST::UnaryOperator(args) =>
         {
@@ -103,7 +123,7 @@ pub fn eval(value: &AST){
 
 fn main() {
 
-    let input = "2 * 4 - 5";
+    let input = "3 / (-1 + 8)";
 
     let lexer_rules = lexer_rules();
     let lexemes = santiago::lexer::lex(&lexer_rules, &input).unwrap();
