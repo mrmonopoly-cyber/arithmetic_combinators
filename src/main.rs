@@ -10,6 +10,7 @@ use arith_comb_gaph::arith_combinator_graph::*;
 pub enum AST {
     Int(i32),
     BinaryOperation(Vec<AST>),
+    UnaryOperator(Vec<AST>),
     OperatorAdd,
     OperatorSubtract,
     OperatorMultiply,
@@ -39,6 +40,9 @@ pub fn grammar() -> Grammar<AST> {
             AST::BinaryOperation;
         "expr" => rules "expr" "divide" "expr" =>
             AST::BinaryOperation;
+        "expr" => rules "subtract" "expr" =>
+            AST::UnaryOperator;
+
 
         "add" => lexemes "+" =>
             |_| AST::OperatorAdd;
@@ -63,7 +67,8 @@ pub fn grammar() -> Grammar<AST> {
 pub fn eval(value: &AST){
     match value {
         AST::Int(int) => push_num(*int),
-        AST::BinaryOperation(args) => {
+        AST::BinaryOperation(args) => 
+        {
             match &args[1] {
                 AST::OperatorAdd => {
                     push_op('+');
@@ -82,6 +87,15 @@ pub fn eval(value: &AST){
             eval(&args[0]);
             eval(&args[2]);
         },
+        AST::UnaryOperator(args) =>
+        {
+            match &args[0]{
+                AST::OperatorSubtract => push_op('-'),
+                _ => unreachable!(),
+            }
+            push_num(0);
+            eval(&args[1]);
+        },
         _ => unreachable!(),
     }
 }
@@ -89,7 +103,7 @@ pub fn eval(value: &AST){
 
 fn main() {
 
-    let input = "-8 / 9";
+    let input = "2 * 4 - 5";
 
     let lexer_rules = lexer_rules();
     let lexemes = santiago::lexer::lex(&lexer_rules, &input).unwrap();

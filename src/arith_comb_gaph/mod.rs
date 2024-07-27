@@ -229,7 +229,7 @@ pub mod arith_combinator_graph{
             free_ports: Some(&[
                 SubFreePort{node: 0, port: 2},
                 SubFreePort{node: 1, port: 0},
-                SubFreePort{node: 1, port: 0},
+                SubFreePort{node: 0, port: 0},
             ]),
             result_node: 0,
         };
@@ -244,7 +244,7 @@ pub mod arith_combinator_graph{
             free_ports: Some(&[
                 SubFreePort{node: 0, port: 2},
                 SubFreePort{node: 1, port: 0},
-                SubFreePort{node: 1, port: 0},
+                SubFreePort{node: 0, port: 0},
             ]),
             result_node: 0,
         };
@@ -265,13 +265,16 @@ pub mod arith_combinator_graph{
 
 
         op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "ZERO", "POS", zero_diff.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "ZERO", "ZERO", zero_diff.clone());
         op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "ZERO", "NEG", zero_diff);
 
         op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "POS", "POS", pos_pos.clone());
         op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "POS", "NEG", pos_pos.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "POS", "ZERO", pos_pos.clone());
 
         op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "NEG", "POS", neg_neg.clone());
         op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "NEG", "NEG", neg_neg.clone());
+        op_pool = add_all_out_rule_arity_3(op_pool, "DIFF", "NEG", "ZERO", neg_neg.clone());
 
 
         op_pool
