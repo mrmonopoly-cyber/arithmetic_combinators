@@ -1,5 +1,9 @@
 mod arith_comb_gaph;
 
+use std::io;
+use std::io::Read;
+use std::io::Write;
+
 use santiago::lexer::LexerRules;
 use santiago::grammar::Associativity;
 use santiago::grammar::Grammar;
@@ -122,22 +126,40 @@ pub fn eval(value: &AST){
 
 
 fn main() {
-
-    let input = "3 / (-1 + 8)";
-
     let lexer_rules = lexer_rules();
-    let lexemes = santiago::lexer::lex(&lexer_rules, &input).unwrap();
-
     let grammar = grammar();
-    let parse_tree = &santiago::parser::parse(&grammar, &lexemes).unwrap()[0];
 
-    let ast = parse_tree.as_abstract_syntax_tree();
+    let mut input = String::new();
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    
+    loop{
+        write!(handle, "CLI>: ").expect("Failed to write prompt");
+        handle.flush().expect("Failed to flush stdout");
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+        if input.trim().is_empty() {
+            continue;
+        }
 
-    eval(&ast);
-    compute();
-    match get_result(){
-        None => println!("computation failed"),
-        Some(r) => println!("res = {}",r),
+        let lexemes = santiago::lexer::lex(&lexer_rules, &input).unwrap();
+        let parse_tree = &santiago::parser::parse(&grammar, &lexemes).unwrap()[0];
+        let ast = parse_tree.as_abstract_syntax_tree();
+
+        eval(&ast);
+
+        compute();
+        match get_result(){
+            None => writeln!(handle, "computation failed").expect("Failed to write error"),
+            Some(r) => {
+                let mut res = "res".to_owned();
+                res.push_str(&r.to_string());
+                writeln!(handle, "res := {}", r).expect("Failed to write result");
+            },
+        };
+        handle.flush().ok();
+        handle.flush().expect("Failed to flush stdout");
+
+        reset();
+
     }
-    reset();
 }

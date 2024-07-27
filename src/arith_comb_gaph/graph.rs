@@ -278,8 +278,6 @@ pub mod graph{
 
                 if  link.start_port == start_node.main_port && 
                     link.dst_port == dst_node.main_port {
-                        link.print_link();
-
                         let rule_to_apply = self.find_node_rule(link.start);
                         if let Some(rule) = rule_to_apply{
                             res.push(rule);
@@ -337,9 +335,6 @@ pub mod graph{
                     start_port: start_node_port, 
                     dst_port: dst_node_port
                 };
-
-                print!("------------");
-                link.print_link();
 
                 links.push(link);
                 {
@@ -610,7 +605,6 @@ pub mod graph{
                             }else if link.dst == node_index{
                                 next = Some(link.start);
                             }else{
-                                link.print_link();
                                 panic!("invalid link node: {}", node_index);
                             }
                         },
@@ -663,7 +657,6 @@ pub mod graph{
                                     let nodes = nodes.read().unwrap();
                                     nodes[node_index].main_port
                                 };
-                                println!("executing rule: {}",rule.main_node_label);
                                 let aux_node_index = linked_to_port(&nodes,&links, node_index,port);
                                 let start_position_new_nodes = 
                                     Graph::adding_new_nodes(&operations, &nodes, &rule);
@@ -689,7 +682,6 @@ pub mod graph{
                 for handle in handler{
                     handle.join().unwrap();
                 }
-                self.print_graph();
             }
         }
 
