@@ -1,41 +1,52 @@
 # Arithmetic Combinators
 
-This project is a Proof of Concept (POC) interpreter for arithmetic expressions using interaction combinators.
+An interpreter written in Rust that uses Interaction Combinator theory to compute basic arithmetic expressions.
 
 ## Table of Contents
-- [Introduction](#introduction)
 - [Features](#features)
+- [Theory](#theory)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Introduction
-Arithmetic Combinators is an interpreter designed to evaluate arithmetic expressions through the application of interaction combinators, providing a unique approach to handling arithmetic operations.
+- [Examples](#examples)
 
 ## Features
-- Interpretation of basic arithmetic expressions
-- Utilization of interaction combinators
-- Written in Rust
+
+- Supports basic arithmetic operations: addition (`+`), subtraction (`-`), multiplication (`*`), and division (`/`).
+- Handles integer numbers, both positive and negative.
+- Includes a Command Line Interface (CLI) that starts automatically when the program is run.
+
+## Theory
+
+This project is based on the Interaction Combinator theory. For more information, refer to the [Interaction Combinator theory paper](https://core.ac.uk/download/pdf/81113716.pdf).
 
 ## Installation
-To install and use this project, follow these steps:
 
 1. Clone the repository:
-    ```bash
+    ```sh
     git clone https://github.com/mrmonopoly-cyber/arithmetic_combinators.git
-    ```
-2. Navigate to the project directory:
-    ```bash
     cd arithmetic_combinators
     ```
-3. Build the project using Cargo:
-    ```bash
-    cargo build
+
+2. Build the project:
+    ```sh
+    cargo build --release
     ```
 
 ## Usage
-After building the project, you can run the interpreter with:
-```bash
-cargo run
 
+Run the interpreter:
+```sh
+cargo run --release
+```
+
+## Examples
+```sh
+CLI>: 6 + 7
+13
+CLI>: 7 / 2
+3
+CLI>: 6 + (-2)
+4
+CLI>: (-9) * (-9)
+81
+```
