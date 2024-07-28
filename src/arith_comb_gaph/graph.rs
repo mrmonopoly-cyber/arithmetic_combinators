@@ -163,8 +163,6 @@ pub mod graph{
                 println!("============================");
                 node_index+=1;
             }
-
-            self.print_links();
         }
 
         fn attach_v3(&mut self,

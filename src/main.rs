@@ -157,9 +157,9 @@ fn main() {
                 writeln!(handle, "res := {}", r).expect("Failed to write result");
             },
         };
-        handle.flush().ok();
         handle.flush().expect("Failed to flush stdout");
 
         reset();
+        input.clear();
     }
 }
