@@ -13,7 +13,7 @@ An interpreter written in Rust that uses Interaction Combinator theory to comput
 
 - Supports basic arithmetic operations: addition (`+`), subtraction (`-`), multiplication (`*`), and division (`/`).
 - Handles integer numbers, both positive and negative.
-- Includes a Command Line Interface (CLI) that starts automatically when the program is run.
+- Includes a Command Line Interface (CLI) that starts automatically when the program starts.
 
 ## Theory
 
