@@ -557,6 +557,7 @@ pub mod arith_combinator_graph{
             free_ports: Some(&[
                 SubFreePort{node: 3,port: 1},
                 SubFreePort{node: 0,port: 0},
+                SubFreePort{node: 1,port: 0},
             ]),
             result_node: 1,
         };
@@ -572,6 +573,7 @@ pub mod arith_combinator_graph{
             free_ports: Some(&[
                 SubFreePort{node: 2,port: 1},
                 SubFreePort{node: 0,port: 0},
+                SubFreePort{node: 1,port: 0},
             ]),
             result_node: 3,
         };
@@ -741,6 +743,7 @@ pub mod arith_combinator_graph{
     }
 
     pub fn push_num(mut num : i32){
+        println!("pushinh: {}",num);
         unsafe {
             if num > 0{
                 while num != 0{
@@ -784,12 +787,14 @@ pub mod arith_combinator_graph{
         }
     }
 
+    #[allow(dead_code)]
     pub fn print_rules(){
         unsafe {
             GRAPH.print_rules();
         }
     }
 
+    #[allow(dead_code)]
     pub fn print_graph(){
         unsafe {
             GRAPH.print_graph();

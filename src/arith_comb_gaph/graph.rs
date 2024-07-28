@@ -125,10 +125,12 @@ pub mod graph{
             }
         }
 
+        #[allow(dead_code)]
         pub fn print_rules(& self){
             self.operations.read().unwrap().print_rules();
         }
 
+        #[allow(dead_code)]
         pub fn print_graph(&self) {
             println!("GRAPH:(out: {})========================",self.result.read().unwrap().unwrap());
             let links = & mut self.links.read().unwrap();
@@ -682,6 +684,7 @@ pub mod graph{
                 for handle in handler{
                     handle.join().unwrap();
                 }
+                self.print_graph();
             }
         }
 

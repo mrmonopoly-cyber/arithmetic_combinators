@@ -1,7 +1,6 @@
 mod arith_comb_gaph;
 
 use std::io;
-use std::io::Read;
 use std::io::Write;
 
 use santiago::lexer::LexerRules;
@@ -147,6 +146,8 @@ fn main() {
 
         eval(&ast);
 
+        print_graph();
+
         compute();
         match get_result(){
             None => writeln!(handle, "computation failed").expect("Failed to write error"),
@@ -160,6 +161,5 @@ fn main() {
         handle.flush().expect("Failed to flush stdout");
 
         reset();
-
     }
 }
