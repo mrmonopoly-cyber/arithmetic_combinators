@@ -87,7 +87,7 @@ pub mod graph{
             let new_link = Link{
                     start: start_node_index,
                     dst: dst_node_index,
-                    start_port: start_port,
+                    start_port,
                     dst_port: dst_node_port,
             };
             links.push(new_link);
@@ -114,6 +114,7 @@ pub mod graph{
             }
         }
 
+        #[allow(unused)]
         pub fn print_links(&self){
             println!("LINKS:========================");
             let links = self.links.read().unwrap();
@@ -155,7 +156,7 @@ pub mod graph{
                                 dst_node_index,
                                 operations.find(dst_node.op_label).unwrap().label,
                                 *link_index);
-                            link.print_link();
+                            // link.print_link();
                         },
                     }
                     index+=1;

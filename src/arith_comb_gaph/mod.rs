@@ -743,7 +743,7 @@ pub mod arith_combinator_graph{
     }
 
     pub fn push_num(mut num : i32){
-        println!("pushinh: {}",num);
+        // println!("pushinh: {}",num);
         unsafe {
             if num > 0{
                 while num != 0{

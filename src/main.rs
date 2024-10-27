@@ -146,7 +146,7 @@ fn main() {
 
         eval(&ast);
 
-        print_graph();
+        // print_graph();
 
         compute();
         match get_result(){
