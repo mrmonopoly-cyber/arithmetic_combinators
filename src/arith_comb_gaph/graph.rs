@@ -682,7 +682,7 @@ pub mod graph{
                 for handle in handler{
                     handle.join().unwrap();
                 }
-                self.print_graph();
+                // self.print_graph();
             }
         }
 
